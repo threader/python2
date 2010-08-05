@@ -268,6 +268,8 @@ Py_InitializeEx(int install_sigs)
 
     _PyImportHooks_Init();
 
+    _PyTime_Init();
+
     if (install_sigs)
         initsigs(); /* Signal handling stuff, including initintr() */
 

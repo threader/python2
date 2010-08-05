@@ -876,6 +876,12 @@
 			</File>
 			<File
 				RelativePath="..\..\Include\pyfpe.h"
+			</File>
+			<File
+				RelativePath="..\Include\pytime.h"
+				>
+			</File>
+			<File
 				>
 			</File>
 			<File
@@ -1826,7 +1832,15 @@
 				>
 			</File>
 			<File
+<<<<<<< HEAD:PC/VS9.0/pythoncore.vcproj
 				RelativePath="..\..\Python\pymath.c"
+=======
+				RelativePath="..\Python\pytime.c"
+				>
+			</File>
+			<File
+				RelativePath="..\Python\pystate.c"
+>>>>>>> 6fc4ade2bb4 (Issue #9079: Added _PyTime_gettimeofday(_PyTime_timeval *tp) to C API):PCbuild/pythoncore.vcproj
 				>
 			</File>
 			<File
