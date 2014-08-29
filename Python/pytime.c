@@ -30,6 +30,41 @@ _PyTime_gettimeofday(_PyTime_timeval *tp)
       Since on some systems (e.g. SCO ODT 3.0) gettimeofday() may
       fail, so we fall back on ftime() or time().
       Note: clock resolution does not imply clock accuracy! */
+
+#if (defined(HAVE_CLOCK_GETTIME) || defined(HAVE_GETTIMEOFDAY) \
+     || defined(HAVE_FTIME))
+    int err;
+#endif
+#ifdef HAVE_CLOCK_GETTIME
+    struct timespec ts;
+#endif
+#ifdef HAVE_FTIME
+    struct timeb t;
+#endif
+
+    /* test clock_gettime(CLOCK_REALTIME) */
+#ifdef HAVE_CLOCK_GETTIME
+    err  = clock_gettime(CLOCK_REALTIME, &ts);
+    if (err == 0) {
+#if 0 
+       if (info) {
+            struct timespec res;
+            info->implementation = "clock_gettime(CLOCK_REALTIME)";
+            info->monotonic = 0;
+            info->adjustable = 1;
+            if (clock_getres(CLOCK_REALTIME, &res) == 0)
+                info->resolution = res.tv_sec + res.tv_nsec * 1e-9;
+            else
+                info->resolution = 1e-9;
+        }
+#endif
+        tp->tv_sec = ts.tv_sec;
+        tp->tv_usec = ts.tv_nsec / 1000;
+        return;
+    }
+#endif
+
+     /* test gettimeofday() */
 #ifdef HAVE_GETTIMEOFDAY
 #ifdef GETTIMEOFDAY_NO_TZ
     if (gettimeofday(tp) == 0)
@@ -39,22 +74,22 @@ _PyTime_gettimeofday(_PyTime_timeval *tp)
         return;
 #endif /* !GETTIMEOFDAY_NO_TZ */
 #endif /* !HAVE_GETTIMEOFDAY */
-#if defined(HAVE_FTIME)
-    {
-        struct timeb t;
-        ftime(&t);
-        tp->tv_sec = t.time;
-        tp->tv_usec = t.millitm * 1000;
+
+#ifdef HAVE_FTIME
+    ftime(&t);
+    tp->tv_sec = t.time;
+    tp->tv_usec = t.millitm * 1000;
+#if 0
+    if (info) {
+        info->implementation = "ftime()";
+        info->resolution = 1e-3;
+        info->monotonic = 0;
+        info->adjustable = 1;
     }
+#endif
 #else /* !HAVE_FTIME */
     tp->tv_sec = time(NULL);
     tp->tv_usec = 0;
 #endif /* !HAVE_FTIME */
     return;
-}
-
-int
-_PyTime_Init()
-{
-    /* Do nothing.  Needed to force linking. */
 }

@@ -102,6 +102,7 @@ class TimeTestCase(unittest.TestCase):
         if hasattr(time, 'CLOCK_MONOTONIC'):
             self.assertRaises(OSError,
                               time.clock_settime, time.CLOCK_MONOTONIC, 0)
+
     def test_conversions(self):
         self.assertTrue(time.ctime(self.t)
                      == time.asctime(time.localtime(self.t)))
