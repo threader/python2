@@ -160,6 +160,68 @@ The :mod:`signal` module defines the following functions:
    will then be called.  Returns nothing.  Not on Windows. (See the Unix man page
    :manpage:`signal(2)`.)
 
+<<<<<<< HEAD
+=======
+   See also :func:`sigwait`, :func:`sigwaitinfo`, :func:`sigtimedwait` and
+   :func:`sigpending`.
+
+
+.. function:: pthread_kill(thread_id, signalnum)
+
+   Send the signal *signalnum* to the thread *thread_id*, another thread in the
+   same process as the caller.  The target thread can be executing any code
+   (Python or not).  However, if the target thread is executing the Python
+   interpreter, the Python signal handlers will be :ref:`executed by the main
+   thread <signals-and-threads>`.  Therefore, the only point of sending a
+   signal to a particular Python thread would be to force a running system call
+   to fail with :exc:`InterruptedError`.
+
+   Use :func:`threading.get_ident()` or the :attr:`~threading.Thread.ident`
+   attribute of :class:`threading.Thread` objects to get a suitable value
+   for *thread_id*.
+
+   If *signalnum* is 0, then no signal is sent, but error checking is still
+   performed; this can be used to check if the target thread is still running.
+
+   Availability: Unix (see the man page :manpage:`pthread_kill(3)` for further
+   information).
+
+   See also :func:`os.kill`.
+
+   .. versionadded:: 3.3
+
+
+.. function:: pthread_sigmask(how, mask)
+
+   Fetch and/or change the signal mask of the calling thread.  The signal mask
+   is the set of signals whose delivery is currently blocked for the caller.
+   Return the old signal mask as a set of signals.
+
+   The behavior of the call is dependent on the value of *how*, as follows.
+
+   * :data:`SIG_BLOCK`: The set of blocked signals is the union of the current
+     set and the *mask* argument.
+   * :data:`SIG_UNBLOCK`: The signals in *mask* are removed from the current
+     set of blocked signals.  It is permissible to attempt to unblock a
+     signal which is not blocked.
+   * :data:`SIG_SETMASK`: The set of blocked signals is set to the *mask*
+     argument.
+
+   *mask* is a set of signal numbers (e.g. {:const:`signal.SIGINT`,
+   :const:`signal.SIGTERM`}). Use ``range(1, signal.NSIG)`` for a full mask
+   including all signals.
+
+   For example, ``signal.pthread_sigmask(signal.SIG_BLOCK, [])`` reads the
+   signal mask of the calling thread.
+
+   Availability: Unix. See the man page :manpage:`sigprocmask(3)` and
+   :manpage:`pthread_sigmask(3)` for further information.
+
+   See also :func:`pause`, :func:`sigpending` and :func:`sigwait`.
+
+   .. versionadded:: 3.3
+
+>>>>>>> c7027b79041 (Issue #20182: converted the signal module to use Argument Clinic)
 
 .. function:: setitimer(which, seconds[, interval])
 
