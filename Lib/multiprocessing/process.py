@@ -128,6 +128,7 @@ class Process(object):
         else:
             from .forking import Popen
         self._popen = Popen(self)
+        self._sentinel = getattr(self._popen, 'sentinel', 'no sentinel on windows')
         # Avoid a refcycle if the target function holds an indirect
         # reference to the process object (see bpo-30775)
         del self._target, self._args, self._kwargs
@@ -222,6 +223,17 @@ class Process(object):
             return self._popen and self._popen.pid
 
     pid = ident
+
+    @property
+    def sentinel(self):
+        '''
+        Return a file descriptor (Unix) or handle (Windows) suitable for
+        waiting for process termination.
+        '''
+        try:
+            return self._sentinel
+        except AttributeError:
+            raise ValueError("process not started")
 
     def __repr__(self):
         if self is _current_process:
