@@ -10,7 +10,7 @@ AC_PREREQ(2.65)
 AC_REVISION($Revision$)
 AC_INIT(python, PYTHON_VERSION, https://bugs.python.org/)
 AC_CONFIG_SRCDIR([Include/object.h])
-AC_CONFIG_HEADER(pyconfig.h)
+AC_CONFIG_HEADERS([pyconfig.h])
 
 AC_CANONICAL_HOST
 AC_SUBST(build)
@@ -3191,21 +3191,24 @@ AC_MSG_RESULT(MACHDEP_OBJS)
 
 # checks for library functions
 AC_CHECK_FUNCS(alarm setitimer getitimer chown \
- clock confstr ctermid execv fchmod fchown fork fpathconf ftime ftruncate \
+ clock confstr ctermid execv faccessat fchmod fchmodat fchown fchownat fork \
+ fpathconf fstatat ftime ftruncate futimesat \
  gai_strerror getgroups getlogin getloadavg getpeername getpgid getpid \
  getentropy \
  getpriority getresuid getresgid getpwent getspnam getspent getsid getwd \
- initgroups kill killpg lchown lstat mkfifo mknod mktime mmap \
- mremap nice pathconf pause plock poll pthread_init \
- putenv readlink realpath \
+ initgroups kill killpg lchmod lchown linkat lstat mkdirat mkfifo \
+ mkfifoat mknod mknodat mktime mmap \
+ mremap nice openat pathconf pause pipe2 plock poll pthread_init \
+ putenv readlink readlinkat realpath renameat \
  select sem_open sem_timedwait sem_getvalue sem_unlink setegid seteuid \
  setgid \
  setlocale setregid setreuid setsid setpgid setpgrp setuid setvbuf snprintf \
  setlocale setregid setreuid setresuid setresgid \
  setsid setpgid setpgrp setuid setvbuf snprintf \
- sigaction siginterrupt sigrelse strftime \
+ sigaction siginterrupt sigrelse strftime symlinkat \
  sysconf tcgetpgrp tcsetpgrp tempnam timegm times tmpfile tmpnam tmpnam_r \
- truncate uname unsetenv utimes waitpid wait3 wait4 wcscoll _getpty)
+ truncate uname unlinkat unsetenv utimensat utimes waitpid wait3 wait4 \
+ wcscoll _getpty)
 
 # Force lchmod off for Linux. Linux disallows changing the mode of symbolic
 # links. Some libc implementations have a stub lchmod implementation that always
