@@ -390,6 +390,10 @@ class Data:
         return "%s(%s)" % (self.__class__.__name__, repr(self.data))
 
 
+class InvalidFileException (ValueError):
+    def __init__(self, message="Invalid file"):
+        ValueError.__init__(self, message)
+
 class PlistParser:
 
     def __init__(self):
@@ -411,7 +415,7 @@ class PlistParser:
         # Reject plist files with entity declarations to avoid XML vulnerabilies in expat.
         # Regular plist files don't contain those declerations, and Apple's plutil tool does not
         # accept them either.
-        raise ValueError("XML entity declarations are not supported in plist files")
+        raise InvalidFileException("XML entity declarations are not supported in plist files")
 
     def handleBeginElement(self, element, attrs):
         self.data = []

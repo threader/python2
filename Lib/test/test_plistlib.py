@@ -209,13 +209,9 @@ class TestPlistlib(unittest.TestCase):
         self.assertEqual(test2, result2)
 
     def test_xml_plist_with_entity_decl(self):
-        try:
+        with self.assertRaisesRegexp(plistlib.InvalidFileException,
+                                     "XML entity declarations are not supported"):
             plistlib.readPlistFromString(XML_PLIST_WITH_ENTITY)
-        except ValueError as e:
-            self.assertIn("XML entity declarations are not supported",
-                          e.message)
-        else:
-            self.fail("expected ValueError to be raised")
 
 
 def test_main():
