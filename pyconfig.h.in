@@ -225,6 +225,9 @@
 /* Define to 1 if you have the 'dup2' function. */
 #undef HAVE_DUP2
 
+/* Define if you have the '_dyld_shared_cache_contains_path' function. */
+#undef HAVE_DYLD_SHARED_CACHE_CONTAINS_PATH
+
 /* Defined when any dynamic module loading is enabled. */
 #undef HAVE_DYNAMIC_LOADING
 
@@ -1159,10 +1162,6 @@
 
 /* Library needed by timemodule.c: librt may be needed for clock_gettime() */
 #undef TIMEMODULE_LIB
-
-/* Define to 1 if you can safely include both <sys/time.h> and <time.h>. This
-   macro is obsolete. */
-#undef TIME_WITH_SYS_TIME
 
 /* Define to 1 if your <sys/time.h> declares 'struct tm'. */
 #undef TM_IN_SYS_TIME
