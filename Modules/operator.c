@@ -1,4 +1,3 @@
-
 #include "Python.h"
 
 PyDoc_STRVAR(operator_doc,
