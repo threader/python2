@@ -602,6 +602,15 @@ class TestFTPClass(TestCase):
         # instead of timing out on accept.
         socket.create_connection((trusted_host, port), timeout=TIMEOUT).close()
 
+    def test_makepasv_issue43285_security_enabled_default(self):
+        self.assertFalse(self.client.trust_server_pasv_ipv4_address)
+        trusted_host, port = self.client.makepasv()
+        self.assertNotEqual(
+                trusted_host, self.server.handler_instance.fake_pasv_server_ip)
+        # Opening and closing a connection keeps the dummy server happy
+        # instead of timing out on accept.
+        socket.create_connection((trusted_host, port), timeout=TIMEOUT).close()
+
     def test_line_too_long(self):
         self.assertRaises(ftplib.Error, self.client.sendcmd,
                           'x' * self.client.maxline * 2)

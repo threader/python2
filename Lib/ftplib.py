@@ -107,7 +107,7 @@ class FTP:
     sock = None
     file = None
     welcome = None
-    passiveserver = 1
+    passiveserver = True
     # Disables https://bugs.python.org/issue43285 security if set to True.
     trust_server_pasv_ipv4_address = False
 
