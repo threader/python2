@@ -1,0 +1,365 @@
+*************************
+What’s new in Tauthon 2.8
+*************************
+
+Tauthon is a backwards-compatible fork of the Python 2.7.17 interpreter
+with new syntax, builtins, and libraries backported from Python 3.x.
+Python code and C-extensions targeting Python 2.7 or below are expected
+to run unmodified on Tauthon and produce the same output. `But with
+Tauthon, that code can now use some of the new features from Python
+3.x.`_
+
+Summary -- Release highlights
+=============================
+
+-  .. rubric:: Function Annotations
+      :name: function-annotations
+
+   .. code:: python
+
+      >>> def f(a:int, b:str) -> list:
+      ...     pass
+      ...
+      >>> f.__annotations__
+      {'a': <type 'int'>, 'b': <type 'str'>, 'return': <type 'list'>}
+
+   *More info:*\ `PEP 3107`_
+
+-  .. rubric:: Keyword-Only Arguments
+      :name: keyword-only-arguments
+
+   .. code:: python
+
+      >>> def f(a, *, b):
+      ...     pass
+      ...
+      >>> f(1, 2)
+      Traceback (most recent call last):
+        File "<stdin>", line 1, in <module>
+      TypeError: f() takes exactly 1 positional argument (2 given)
+      >>> f(1, b=2)
+      >>>
+
+   *More info:*\ `PEP 3102`_
+
+-  .. rubric:: “async” and “await” Syntax
+      :name: async-and-await-syntax
+
+   .. code:: python
+
+      >>> import types
+      >>> @types.coroutine
+      ... def delayed_print():
+      ...     printme = yield
+      ...     print printme
+      ...
+      >>> async def main():
+      ...     while True:
+      ...         await delayed_print()
+      ...
+      >>> coro = main()
+      >>> coro.send(None)
+      >>> coro.send("hello")
+      hello
+      >>> coro.send("there")
+      there
+      >>> coro.send("friend")
+      friend
+
+   *More info:*\ `PEP 492`_\ *,*\ `Tutorial`_
+
+-  .. rubric:: Argument-less “super”
+      :name: argument-less-super
+
+   .. code:: python
+
+      >>> class MyList(list):
+      ...     def __repr__(self):
+      ...             return "MyList" + super().__repr__()
+      ...
+      >>> MyList(range(3))
+      MyList[0, 1, 2]
+
+   *More info:*\ `PEP 3135`_\ *,*\ `API Docs super`_
+
+-  .. rubric:: New Metaclass Syntax
+      :name: new-metaclass-syntax
+
+   .. code:: python
+
+       >>> from collections import OrderedDict
+       >>> class Meta(type):
+       ...     @staticmethod
+       ...     def __prepare__(name, bases, **kwds):
+       ...             return OrderedDict()
+       ...     def __new__(cls, name, bases, namespace, **kwds):
+       ...             namespace.update(kwds)
+       ...             res = type.__new__(cls, name, bases, dict(namespace))
+       ...             res._namespace = namespace
+       ...             return res
+       ...     def __init__(*args, **kwds):
+       ...             pass
+       ...
+       >>> class MyClass(metaclass=Meta, foo="bar"):
+       ...     def first(self): pass
+       ...     def second(self): pass
+       ...     def third(self): pass
+       ...
+       >>> MyClass.foo
+       'bar'
+       >>> MyClass._namespace
+       OrderedDict([('__module__', '__main__'), ('first', <function first at 0x1007ef568>), ('second', <function second at 0x10131b060>), ('third', <function third at 0x10131b118>), ('foo', 'bar')])
+
+-  .. rubric:: “nonlocal”
+      :name: nonlocal
+
+   .. code:: python
+
+      >>> x = 0
+      >>> def f():
+      ...     x = 1
+      ...     def g():
+      ...         nonlocal x
+      ...         x = 2
+      ...     print x
+      ...     g()
+      ...     print x
+      ...
+      >>> print x; f(); print x
+      0
+      1
+      2
+      0
+      >>> nonlocal = True; print nonlocal
+      True
+
+   Caveat: As you can see, to maintain backwards compatibility nonlocal
+   is not a keyword, unlike in Python 3.x. So it can still be used as an
+   identifier.
+
+   *More info:*\ `PEP 3104`_\ *,*\ `API Docs nonlocal`_
+
+-  .. rubric:: “yield from” Syntax
+      :name: yield-from-syntax
+
+   .. code:: python
+
+      >>> def generator():
+      ...     yield from range(3)
+      ...     yield from ['a', 'b', 'c']
+      ...
+      >>> [x for x in generator()]
+      [0, 1, 2, 'a', 'b', 'c']
+
+   *More info:*\ `PEP 380`_
+
+-  .. rubric:: “typing” Module
+      :name: typing-module
+
+   .. code:: python
+
+      >>> from typing import List, Dict
+      >>> List[Dict[str, int]]
+      typing.List[typing.Dict[str, int]]
+      >>> def wordcount(words:List[str]) -> Dict[str, int]:
+      ...     return collections.Counter(words)
+
+   *More info:*\ `PEP 483`_\ *,*\ `PEP 484`_\ *,*\ `API
+   Docs <https://docs.python.org/3/library/typing.html>`__
+
+-  .. rubric:: Function Signatures in “inspect”
+      :name: function-signatures-in-inspect
+
+   .. code:: python
+
+      >>> import inspect
+      >>> def f(a:int, b, *args, c:str="foo", **kwds) -> list: pass
+      ...
+      >>> inspect.signature(f)
+      <Signature (a:int, b, *args, c:str='foo', **kwds) -> list>
+      >>> inspect.signature(f).parameters['c'].default
+      'foo'
+
+   *More info:*\ `PEP 362`_\ *,*\ `API
+   Docs <https://docs.python.org/3/library/inspect.html#introspecting-callables-with-the-signature-object>`__
+
+-  .. rubric:: Matrix Multiplication Operator
+      :name: matrix-multiplication-operator
+
+   .. code:: python
+
+      >>> import numpy as np
+      >>> class Matrix(np.matrix):
+      ...     def __matmul__(self, other):
+      ...         return np.dot(self, other)
+      ...
+      >>> X = Matrix([[1, 2], [3, 4]])
+      >>> Y = Matrix([[4, 3], [2, 1]])
+      >>> print X
+      [[1 2]
+       [3 4]]
+      >>> print Y
+      [[4 3]
+       [2 1]]
+      >>> print X @ Y
+      [[ 8  5]
+       [20 13]]
+      >>> X @= Y
+      >>> X
+      matrix([[ 8,  5],
+              [20, 13]])
+
+   *More info:*\ `PEP 465`_
+
+-  .. rubric:: Fine-grained OSErrors
+      :name: fine-grained-oserrors
+
+   .. code:: python
+
+      >>> open("not a file")
+      Traceback (most recent call last):
+        File "<stdin>", line 1, in <module>
+      IOError: [Errno 2] No such file or directory: 'not a file'
+      >>> try:
+      ...     open("not a file")
+      ... except FileNotFoundError:
+      ...     pass
+      ...
+      >>>
+
+   Caveat: As you can see from the example, to maintain full backwards
+   compatibility Tauthon does not raise these new OSErrors. Rather it
+   gives you fine-grained OSErrors that you can catch them with, as an
+   alternative to checking errno.
+
+   *More info:*\ `PEP 3151`_\ *,*\ `API Docs oserrors`_
+
+-  .. rubric:: Underscores in Numeric Literals
+      :name: underscores-in-numeric-literals
+
+   .. code:: python
+
+      >>> 1_234_567
+      1234567
+      >>> 0xBEEF_CAFE
+      3203386110
+      >>> 0b1111_0000
+      240
+      >>>
+
+   *More info:*\ `PEP 515`_
+
+-  .. rubric:: “concurrent.futures” Module
+      :name: concurrent.futures-module
+
+   .. code:: python
+
+      >>> from concurrent.futures import ThreadPoolExecutor
+      >>> from datetime import datetime
+      >>> import time
+      >>> def snooze(seconds):
+      ...     print "It's now %s, snoozing for %d seconds." % (datetime.now(), seconds)
+      ...     time.sleep(seconds)
+      ...     print "BEEP BEEP BEEP it's %s, time to get up!" % datetime.now()
+      ...
+      >>> def snooze_again(future):
+      ...     print "Going back to sleep"
+      ...     snooze(3)
+      ...
+      >>> pool = ThreadPoolExecutor()
+      >>> future = pool.submit(snooze, 60)
+      It's now 2016-11-17 12:09:41.822658, snoozing for 60 seconds.
+      >>> print future
+      <Future at 0x1040b7b10 state=running>
+      >>> future.add_done_callback(snooze_again)
+      >>> print datetime.now()
+      2016-11-17 12:10:11.189143
+      >>> BEEP BEEP BEEP it's 2016-11-17 12:10:41.824054, time to get up!
+      Going back to sleep
+      It's now 2016-11-17 12:10:41.824206, snoozing for 3 seconds.
+      BEEP BEEP BEEP it's 2016-11-17 12:10:44.829196, time to get up!
+
+   *More info:*\ `PEP 3148`_\ *,*\ `API
+   Docs <https://docs.python.org/3/library/concurrent.futures.html>`__
+
+-  .. rubric:: “types.MappingProxyType”
+      :name: types.mappingproxytype
+
+   .. code:: python
+
+      >>> import types
+      >>> original = {'a': 1}
+      >>> read_only_view = types.MappingProxyType(original)
+      >>> read_only_view['a']
+      1
+      >>> read_only_view['b'] = 2
+      Traceback (most recent call last):
+        File "<stdin>", line 1, in <module>
+      TypeError: 'dict_proxy' object does not support item assignment
+      >>> original['c'] = 3
+      >>> original
+      {'a': 1, 'c': 3}
+      >>> read_only_view['c']
+      3
+
+   *More info:*\ `API
+   Docs <https://docs.python.org/3.5/library/types.html#types.MappingProxyType>`__
+
+-  .. rubric:: “selectors” Module
+      :name: selectors-module
+
+   .. code:: python
+
+      >>> import selectors
+
+   *More info:*\ `API
+   Docs <https://docs.python.org/3/library/selectors.html>`__
+
+-  .. rubric:: UTF-8 as the default source encoding
+      :name: utf-8-as-the-default-source-encoding
+
+   *More info:*\ `PEP 3120`_
+
+-  .. rubric:: monotonic time, performance counter, and process time
+      functions
+      :name: monotonic-time-performance-counter-and-process-time-functions
+
+   *More info:*\ `PEP 418`_
+
+-  .. rubric:: tab completion enabled by default in the interactive
+      interpreter
+      :name: tab-completion-enabled-by-default-in-the-interactive-interpreter
+
+   *More info:*\ `BPO 5845`_
+
+.. _PEP 3120: https://www.python.org/dev/peps/pep-3120/
+.. _PEP 418: https://www.python.org/dev/peps/pep-0418/
+.. _BPO 5845: https://bugs.python.org/issue5845
+.. _PEP 3151: https://www.python.org/dev/peps/pep-3151/
+.. _API Docs oserrors: https://docs.python.org/3/library/exceptions.html#os-exceptions
+.. _PEP 515: https://www.python.org/dev/peps/pep-0515/
+.. _PEP 3148: https://www.python.org/dev/peps/pep-3148/
+.. _PEP 3104: https://www.python.org/dev/peps/pep-3104/
+.. _API Docs nonlocal: https://docs.python.org/3/reference/simple_stmts.html#nonlocal
+.. _PEP 380: https://www.python.org/dev/peps/pep-0380/
+.. _PEP 483: https://www.python.org/dev/peps/pep-0483/
+.. _PEP 484: https://www.python.org/dev/peps/pep-0484/
+.. _PEP 362: https://www.python.org/dev/peps/pep-0362/
+.. _PEP 465: https://www.python.org/dev/peps/pep-0465/
+.. _PEP 3107: https://www.python.org/dev/peps/pep-3107/
+.. _PEP 3102: https://www.python.org/dev/peps/pep-3102/
+.. _PEP 492: https://www.python.org/dev/peps/pep-0492/
+.. _Tutorial: http://www.snarky.ca/how-the-heck-does-async-await-work-in-python-3-5
+.. _PEP 3135: https://www.python.org/dev/peps/pep-3135/
+.. _API Docs super: https://docs.python.org/3/library/functions.html#super
+.. _But with Tauthon, that code can now use some of the new features from Python 3.x.: https://www.naftaliharris.com/blog/why-making-python-2.8/
+
+
+Notable changes in Tauthon 2.8.3
+================================
+
+A security fix alters the :class:`ftplib.FTP` behavior to not trust the
+IPv4 address sent from the remote server when setting up a passive data
+channel.  We reuse the ftp server IP address instead.  For unusual code
+requiring the old behavior, set a ``trust_server_pasv_ipv4_address``
+attribute on your FTP instance to ``True``.  (See Python's :issue:`43285`)
