@@ -861,7 +861,7 @@ class AbstractBasicAuthHandler:
     # First regexp: start of the string or ',' or header start
     rx = re.compile('(?:^|,|^[^:]*:)'
                     '[ \t]*'    # optional whitespaces
-                    '([^ \t]+)' # scheme like "Basic"
+                    '([^ \t,]+)'# scheme like "Basic"
                     '[ \t]+'    # mandatory whitespaces
                     # realm=xxx
                     # realm='xxx'
