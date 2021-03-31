@@ -463,56 +463,65 @@ PyCArg_dealloc(PyCArgObject *self)
     PyObject_Del(self);
 }
 
+/* In 3.x, _PyUnicode_IsPrintable(c) is used instead of isprint(c), to have
+ * more control and be locale-independent. But isprint(c) is used here after
+ * having tested that c < 128, so the result should be the same in all locales
+ * that are supersets of ASCII, which should be more than enough. Also, this
+ * function is used only below in PyCArg_repr, which produces unreadable
+ * syntax, so what is printed exactly really should not be parsed. */
+static int
+is_literal_char(unsigned char c)
+{
+    return c < 128 && c != '\\' && c != '\'' && isprint(c);
+}
+
 static PyObject *
 PyCArg_repr(PyCArgObject *self)
 {
     switch(self->tag) {
     case 'b':
     case 'B':
-        return PyString_FromFormat("<cparam '%c' (%d)>",
+        return PyUnicode_FromFormat("<cparam '%c' (%d)>",
             self->tag, self->value.b);
     case 'h':
     case 'H':
-        return PyString_FromFormat("<cparam '%c' (%d)>",
+        return PyUnicode_FromFormat("<cparam '%c' (%d)>",
             self->tag, self->value.h);
     case 'i':
     case 'I':
-        return PyString_FromFormat("<cparam '%c' (%d)>",
+        return PyUnicode_FromFormat("<cparam '%c' (%d)>",
             self->tag, self->value.i);
     case 'l':
     case 'L':
-        return PyString_FromFormat("<cparam '%c' (%ld)>",
+        return PyUnicode_FromFormat("<cparam '%c' (%ld)>",
             self->tag, self->value.l);
 
 #ifdef HAVE_LONG_LONG
     case 'q':
     case 'Q':
-        return PyString_FromFormat("<cparam '%c' (%" PY_FORMAT_LONG_LONG "d)>",
+        return PyUnicode_FromFormat("<cparam '%c' (%lld)>",
             self->tag, self->value.q);
 #endif
     case 'd':
     case 'f': {
+        PyObject *result;
         PyObject *f = PyFloat_FromDouble((self->tag == 'f') ? self->value.f : self->value.d);
         if (f == NULL) {
             return NULL;
         }
-        PyObject *r = PyObject_Repr(f);
+        result = PyUnicode_FromFormat("<cparam '%c' (%R)>", self->tag, f);
         Py_DECREF(f);
-        if (r == NULL) {
-            return NULL;
-        }
-        char *value = PyString_AsString(r);
-        if (value == NULL) {
-            return NULL;
-        }
-        PyObject *result = PyString_FromFormat("<cparam '%c' (%s)>", self->tag, value);
-        Py_DECREF(r);
         return result;
     }
-
     case 'c':
-        return PyString_FromFormat("<cparam '%c' (%c)>",
-            self->tag, self->value.c);
+        if (is_literal_char((unsigned char)self->value.c)) {
+            return PyUnicode_FromFormat("<cparam '%c' ('%c')>",
+                self->tag, self->value.c);
+        }
+        else {
+            return PyUnicode_FromFormat("<cparam '%c' ('\\x%02x')>",
+                self->tag, (unsigned char)self->value.c);
+        }
 
 /* Hm, are these 'z' and 'Z' codes useful at all?
    Shouldn't they be replaced by the functionality of c_string
@@ -521,12 +530,18 @@ PyCArg_repr(PyCArgObject *self)
     case 'z':
     case 'Z':
     case 'P':
-        return PyString_FromFormat("<cparam '%c' (%p)>",
+        return PyUnicode_FromFormat("<cparam '%c' (%p)>",
             self->tag, self->value.p);
 
     default:
-        return PyString_FromFormat("<cparam '%c' at %p>",
-            self->tag, self);
+        if (is_literal_char((unsigned char)self->tag)) {
+            return PyUnicode_FromFormat("<cparam '%c' at %p>",
+                (unsigned char)self->tag, (void *)self);
+        }
+        else {
+            return PyUnicode_FromFormat("<cparam 0x%02x at %p>",
+                (unsigned char)self->tag, (void *)self);
+        }
     }
 }
 

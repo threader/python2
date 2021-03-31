@@ -229,7 +229,7 @@ class SimpleTypesTestCase(unittest.TestCase):
             c_void_p,
         )
         self.assertRegexpMatches(repr(c_bool.from_param(True)), r"^<cparam '\?' at 0x[A-Fa-f0-9]+>$")
-        self.assertEqual(repr(c_char.from_param('a')), "<cparam 'c' (a)>")
+        self.assertEqual(repr(c_char.from_param('a')), "<cparam 'c' ('a')>")
         self.assertRegexpMatches(repr(c_wchar.from_param('a')), r"^<cparam 'u' at 0x[A-Fa-f0-9]+>$")
         self.assertEqual(repr(c_byte.from_param(98)), "<cparam 'b' (98)>")
         self.assertEqual(repr(c_ubyte.from_param(98)), "<cparam 'B' (98)>")
