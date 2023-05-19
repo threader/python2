@@ -14419,6 +14419,7 @@ else
 /* end confdefs.h.  */
 
 #include <poll.h>
+#include <unistd.h>
 
 int main()
 {
