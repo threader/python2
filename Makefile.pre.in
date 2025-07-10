@@ -1077,6 +1077,7 @@ EXTRAPLATDIR= @EXTRAPLATDIR@
 EXTRAMACHDEPPATH=@EXTRAMACHDEPPATH@
 MACHDEPS=	$(PLATDIR) $(EXTRAPLATDIR)
 XMLLIBSUBDIRS=  xml xml/dom xml/etree xml/parsers xml/sax
+<<<<<<< HEAD
 PLATMACDIRS= plat-mac plat-mac/Carbon plat-mac/lib-scriptpackages \
 	plat-mac/lib-scriptpackages/_builtinSuites \
 	plat-mac/lib-scriptpackages/CodeWarrior \
@@ -1091,6 +1092,7 @@ LIBSUBDIRS=	lib-tk lib-tk/test lib-tk/test/test_tkinter \
 		lib-tk/test/test_ttk site-packages test test/audiodata test/capath \
 		test/data test/cjkencodings test/decimaltestdata test/xmltestdata \
 		test/imghdrdata \
+		profile \
 		test/subprocessdata \
 		test/support \
 		test/tracedmodules \
