@@ -136,7 +136,7 @@ The :mod:`urlparse` module defines the following functions:
       now raise :exc:`ValueError`.
 
 
-.. function:: parse_qs(qs[, keep_blank_values[, strict_parsing[, max_num_fields]]])
+.. function:: parse_qs(qs[, keep_blank_values[, strict_parsing[, max_num_fields[, separator='&']]]])
 
    Parse a query string given as a string argument (data of type
    :mimetype:`application/x-www-form-urlencoded`).  Data are returned as a
@@ -157,6 +157,8 @@ The :mod:`urlparse` module defines the following functions:
    read. If set, then throws a :exc:`ValueError` if there are more than
    *max_num_fields* fields read.
 
+   The optional argument *separator* is the symbol to use for separating the query arguments. It defaults to `&`.
+
    Use the :func:`urllib.urlencode` function to convert such dictionaries into
    query strings.
 
@@ -166,7 +168,12 @@ The :mod:`urlparse` module defines the following functions:
    .. versionchanged:: 2.7.16
       Added *max_num_fields* parameter.
 
-.. function:: parse_qsl(qs[, keep_blank_values[, strict_parsing[, max_num_fields]]])
+   .. versionchanged:: 2.7 security update
+      Added *separator* parameter with the default value of `&`. Python versions earlier than Python 3.10 allowed using both ";" and "&" as
+      query parameter separator. This has been changed to allow only a single separator key, with "&" as the default separator.
+
+
+.. function:: parse_qsl(qs[, keep_blank_values[, strict_parsing[, max_num_fields[, separator='&']]]])
 
    Parse a query string given as a string argument (data of type
    :mimetype:`application/x-www-form-urlencoded`).  Data are returned as a list of
@@ -186,6 +193,8 @@ The :mod:`urlparse` module defines the following functions:
    read. If set, then throws a :exc:`ValueError` if there are more than
    *max_num_fields* fields read.
 
+   The optional argument *separator* is the symbol to use for separating the query arguments. It defaults to `&`.
+
    Use the :func:`urllib.urlencode` function to convert such lists of pairs into
    query strings.
 
@@ -194,6 +203,11 @@ The :mod:`urlparse` module defines the following functions:
 
    .. versionchanged:: 2.7.16
       Added *max_num_fields* parameter.
+
+   .. versionchanged:: 2.7 security update
+      Added *separator* parameter with the default value of `&`. Python versions earlier than Python 3.10 allowed using both ";" and "&" as
+      query parameter separator. This has been changed to allow only a single separator key, with "&" as the default separator.
+
 
 .. function:: urlunparse(parts)
 
