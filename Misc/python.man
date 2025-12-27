@@ -456,7 +456,8 @@ The Python Software Foundation: https://www.python.org/psf/
 .SH INTERNET RESOURCES
 Main website:  https://www.python.org/
 .br
-Documentation:  https://docs.python.org/2/
+Documentation:  file:///usr/share/doc/python2.7/html/index.html (python-doc package)
+or https://docs.python.org/2/
 .br
 Developer resources:  https://docs.python.org/devguide/
 .br
