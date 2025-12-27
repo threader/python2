@@ -1,14 +1,9 @@
-double _Py_acosh(double x);
-double _Py_asinh(double x);
-double _Py_atanh(double x);
-double _Py_expm1(double x);
-double _Py_log1p(double x);
-
 #ifdef HAVE_ACOSH
 #define m_acosh acosh
 #else
 /* if the system doesn't have acosh, use the substitute
    function defined in Modules/_math.c. */
+   double _Py_acosh(double x);
 #define m_acosh _Py_acosh
 #endif
 
@@ -17,6 +12,7 @@ double _Py_log1p(double x);
 #else
 /* if the system doesn't have asinh, use the substitute
    function defined in Modules/_math.c. */
+   double _Py_asinh(double x);
 #define m_asinh _Py_asinh
 #endif
 
@@ -25,6 +21,7 @@ double _Py_log1p(double x);
 #else
 /* if the system doesn't have atanh, use the substitute
    function defined in Modules/_math.c. */
+   double _Py_atanh(double x);
 #define m_atanh _Py_atanh
 #endif
 
@@ -33,9 +30,12 @@ double _Py_log1p(double x);
 #else
 /* if the system doesn't have expm1, use the substitute
    function defined in Modules/_math.c. */
+   double _Py_expm1(double x);
 #define m_expm1 _Py_expm1
 #endif
 
 /* Use the substitute from _math.c on all platforms:
    it includes workarounds for buggy handling of zeros. */
+   double _Py_log1p(double x);
+
 #define m_log1p _Py_log1p
