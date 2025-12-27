@@ -20,10 +20,6 @@ class BuildTestCase(support.TempdirManager,
         # if not specified, plat_name gets the current platform
         self.assertEqual(cmd.plat_name, get_platform())
 
-        # build_purelib is build + lib
-        wanted = os.path.join(cmd.build_base, 'lib')
-        self.assertEqual(cmd.build_purelib, wanted)
-
         # build_platlib is 'build/lib.platform-x.x[-pydebug]'
         # examples:
         #   build/lib.macosx-10.3-i386-2.7
@@ -33,6 +29,10 @@ class BuildTestCase(support.TempdirManager,
             plat_spec += '-pydebug'
         wanted = os.path.join(cmd.build_base, 'lib' + plat_spec)
         self.assertEqual(cmd.build_platlib, wanted)
+
+        # build_purelib is build + lib
+        wanted = os.path.join(cmd.build_base, 'lib' + plat_spec)
+        self.assertEqual(cmd.build_purelib, wanted)
 
         # by default, build_lib = build_purelib
         self.assertEqual(cmd.build_lib, cmd.build_purelib)

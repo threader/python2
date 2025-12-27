@@ -295,8 +295,8 @@ class BuildExtTestCase(support.TempdirManager,
         finally:
             os.chdir(old_wd)
         self.assertTrue(os.path.exists(so_file))
-        self.assertEqual(os.path.splitext(so_file)[-1],
-                         sysconfig.get_config_var('SO'))
+        so_ext = sysconfig.get_config_var('SO')
+        self.assertEqual(so_file[len(so_file)-len(so_ext):], so_ext)
         so_dir = os.path.dirname(so_file)
         self.assertEqual(so_dir, other_tmp_dir)
         cmd.compiler = None
@@ -304,8 +304,7 @@ class BuildExtTestCase(support.TempdirManager,
         cmd.run()
         so_file = cmd.get_outputs()[0]
         self.assertTrue(os.path.exists(so_file))
-        self.assertEqual(os.path.splitext(so_file)[-1],
-                         sysconfig.get_config_var('SO'))
+        self.assertEqual(so_file[len(so_file)-len(so_ext):], so_ext)
         so_dir = os.path.dirname(so_file)
         self.assertEqual(so_dir, cmd.build_lib)
 

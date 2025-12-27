@@ -121,8 +121,8 @@ SCRIPTDIR=	$(prefix)/lib
 # Detailed destination directories
 BINLIBDEST=	$(LIBDIR)/python$(VERSION)
 LIBDEST=	$(SCRIPTDIR)/python$(VERSION)
-INCLUDEPY=	$(INCLUDEDIR)/python$(VERSION)
-CONFINCLUDEPY=	$(CONFINCLUDEDIR)/python$(VERSION)
+INCLUDEPY=	$(INCLUDEDIR)/python$(VERSION)$(DEBUG_EXT)
+CONFINCLUDEPY=	$(CONFINCLUDEDIR)/python$(VERSION)$(DEBUG_EXT)
 LIBP=		$(LIBDIR)/python$(VERSION)
 
 # Symbols used for using shared libraries
@@ -135,6 +135,8 @@ DESTSHARED=	$(BINLIBDEST)/lib-dynload
 # Executable suffix (.exe on Windows and Mac OS X)
 EXE=		@EXEEXT@
 BUILDEXE=	@BUILDEXEEXT@
+
+DEBUG_EXT=	@DEBUG_EXT@
 
 # Short name and location for Mac OS X Python framework
 UNIVERSALSDK=@UNIVERSALSDK@
@@ -545,7 +547,7 @@ $(LIBRARY): $(LIBRARY_OBJS)
 	$(AR) $(ARFLAGS) $@ $(sort $(MODOBJS))
 	$(RANLIB) $@
 
-libpython$(VERSION).so: $(LIBRARY_OBJS)
+libpython$(VERSION)$(DEBUG_EXT).so: $(LIBRARY_OBJS)
 	if test $(INSTSONAME) != $(LDLIBRARY); then \
 		$(BLDSHARED) $(PY_LDFLAGS) $(CCSHARED) -Wl,-h$(INSTSONAME) -o $(INSTSONAME) $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM) $(LDLAST); \
 		$(LN) -f $(INSTSONAME) $@; \
@@ -1207,8 +1209,8 @@ inclinstall:
 	$(INSTALL_DATA) pyconfig.h $(DESTDIR)$(CONFINCLUDEPY)/pyconfig.h
 
 # Install the library and miscellaneous stuff needed for extending/embedding
-# This goes into $(exec_prefix)
-LIBPL=		$(LIBP)/config
+# This goes into $(exec_prefix)$(DEBUG_EXT)
+LIBPL=		$(LIBP)/config$(DEBUG_EXT)
 
 # pkgconfig directory
 LIBPC=		$(LIBDIR)/pkgconfig

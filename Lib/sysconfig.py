@@ -338,7 +338,7 @@ def get_makefile_filename():
     """Return the path of the Makefile."""
     if _PYTHON_BUILD:
         return os.path.join(_PROJECT_BASE, "Makefile")
-    return os.path.join(get_path('platstdlib').replace("/usr/local","/usr",1), "config", "Makefile")
+    return os.path.join(get_path('platstdlib').replace("/usr/local","/usr",1), "config" + (sys.pydebug and "_d" or ""), "Makefile")
 
 # Issue #22199: retain undocumented private name for compatibility
 _get_makefile_filename = get_makefile_filename
@@ -470,7 +470,7 @@ def get_config_h_filename():
         else:
             inc_dir = _PROJECT_BASE
     else:
-        inc_dir = get_path('platinclude').replace("/usr/local","/usr",1)
+        inc_dir = get_path('platinclude').replace("/usr/local","/usr",1)+(sys.pydebug and "_d" or "")
     return os.path.join(inc_dir, 'pyconfig.h')
 
 def get_scheme_names():
