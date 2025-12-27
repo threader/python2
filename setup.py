@@ -903,7 +903,7 @@ class PyBuildExt(build_ext):
                 print "IOError while reading opensshv.h:", msg
                 pass
 
-        min_openssl_ver = 0x00907000
+        min_openssl_ver = 0x00000000
         have_any_openssl = ssl_incs is not None and ssl_libs is not None
         have_usable_openssl = (have_any_openssl and
                                openssl_ver >= min_openssl_ver)
