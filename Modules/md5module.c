@@ -31,7 +31,7 @@ newmd5object(void)
     if (md5p == NULL)
         return NULL;
 
-    md5_init(&md5p->md5);       /* actual initialisation */
+    _Py_md5_init(&md5p->md5);       /* actual initialisation */
     return md5p;
 }
 
@@ -65,7 +65,7 @@ md5_update(md5object *self, PyObject *args)
             nbytes = INT_MAX;
         else
             nbytes = n;
-        md5_append(&self->md5, buf,
+        _Py_md5_append(&self->md5, buf,
                    Py_SAFE_DOWNCAST(nbytes, Py_ssize_t, unsigned int));
         buf += nbytes;
         n -= nbytes;
@@ -91,7 +91,7 @@ md5_digest(md5object *self)
 
     /* make a temporary copy, and perform the final */
     mdContext = self->md5;
-    md5_finish(&mdContext, aDigest);
+    _Py_md5_finish(&mdContext, aDigest);
 
     return PyString_FromStringAndSize((char *)aDigest, 16);
 }
@@ -114,7 +114,7 @@ md5_hexdigest(md5object *self)
 
     /* make a temporary copy, and perform the final */
     mdContext = self->md5;
-    md5_finish(&mdContext, digest);
+    _Py_md5_finish(&mdContext, digest);
 
     /* Make hex version of the digest */
     for(i=j=0; i<16; i++) {
@@ -294,7 +294,7 @@ MD5_new(PyObject *self, PyObject *args)
             nbytes = INT_MAX;
         else
             nbytes = n;
-        md5_append(&md5p->md5, buf,
+        _Py_md5_append(&md5p->md5, buf,
                    Py_SAFE_DOWNCAST(nbytes, Py_ssize_t, unsigned int));
         buf += nbytes;
         n -= nbytes;
