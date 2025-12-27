@@ -1176,7 +1176,7 @@ AsObj(PyObject *value)
             return NULL;
         }
         if (sizeof(Py_UNICODE) == sizeof(Tcl_UniChar))
-            return Tcl_NewUnicodeObj(inbuf, (int)size);
+            return Tcl_NewStringObj(PyBytes_AS_STRING(inbuf), (int)size);
         allocsize = ((size_t)size) * sizeof(Tcl_UniChar);
         if (allocsize >= size)
             outbuf = (Tcl_UniChar*)attemptckalloc(allocsize);
@@ -1201,7 +1201,7 @@ AsObj(PyObject *value)
         ckfree(FREECAST outbuf);
         return result;
 #else
-        return Tcl_NewUnicodeObj(inbuf, (int)size);
+        return  Tcl_NewStringObj(PyBytes_AS_STRING(value), (int)size);
 #endif
     }
 #endif
