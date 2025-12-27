@@ -1097,7 +1097,7 @@ then
 	    STRICT_PROTO="-Wstrict-prototypes"
 	fi
         # For gcc 4.x we need to use -fwrapv so lets check if its supported
-        if "$CC" -v --help 2>/dev/null |grep -- -fwrapv > /dev/null; then
+        if "$CC" -v --help 2>/dev/null | grep -- -fwrapv >/dev/null; then
            WRAP="-fwrapv"
         fi
 
@@ -1515,6 +1515,9 @@ if test "$Py_LTO" = 'true' ; then
       # to get debug symbols.
       LTOFLAGS="$LTOFLAGS -g"
   fi
+
+  # LTO expects optimisation flags in LDFLAGS
+  LDFLAGS="${LDFLAGS} ${CFLAGS} ${OPT}"
 fi
 
 
