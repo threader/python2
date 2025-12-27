@@ -55,7 +55,7 @@ install_pythonw: pythonw
 	$(INSTALL_PROGRAM) $(STRIPFLAG) pythonw "$(DESTDIR)$(prefix)/bin/pythonw$(VERSION)"
 	$(INSTALL_PROGRAM) $(STRIPFLAG) pythonw "$(DESTDIR)$(prefix)/bin/python$(VERSION)"
 	ln -sf python$(VERSION) "$(DESTDIR)$(prefix)/bin/python2"
-	ln -sf python2 "$(DESTDIR)$(prefix)/bin/python"
+	ln -sf python2 "$(DESTDIR)$(prefix)/bin/python2"
 	ln -sf pythonw$(VERSION) "$(DESTDIR)$(prefix)/bin/pythonw2"
 	ln -sf pythonw2 "$(DESTDIR)$(prefix)/bin/pythonw"
 ifneq ($(LIPO_32BIT_FLAGS),)
@@ -76,7 +76,7 @@ installunixtools:
 	if [ ! -d "$(DESTDIR)$(FRAMEWORKUNIXTOOLSPREFIX)/bin" ]; then  \
 		$(INSTALL) -d -m $(DIRMODE) "$(DESTDIR)$(FRAMEWORKUNIXTOOLSPREFIX)/bin" ;\
 	fi
-	for fn in python pythonw idle pydoc python-config smtpd.py 2to3 \
+	for fn in python pythonw idle pydoc python2-config smtpd.py 2to3 \
 		  python2 pythonw2 idle2 \
 		  pydoc2 python2-config smtpd2.py \
 		  2to3-2 \

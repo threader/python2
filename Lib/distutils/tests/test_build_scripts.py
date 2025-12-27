@@ -60,7 +60,7 @@ class BuildScriptsTestCase(support.TempdirManager,
                            "pass\n"))
         expected.append("script2.py")
         self.write_script(dir, "script2.py",
-                          ("#!/usr/bin/python\n"
+                          ("#!/usr/bin/python2\n"
                            "# bogus script w/ Python sh-bang\n"
                            "pass\n"))
         expected.append("shell.sh")

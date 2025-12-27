@@ -353,7 +353,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/usr/bin/python generate-darwin-source-and-headers.py --only-ios";
+			shellScript = "/usr/bin/python2 generate-darwin-source-and-headers.py --only-ios";
 		};
 		DB13B3061849E0490010F42D /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -366,7 +366,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/usr/bin/python generate-darwin-source-and-headers.py --only-osx";
+			shellScript = "/usr/bin/python2 generate-darwin-source-and-headers.py --only-osx";
 		};
 /* End PBXShellScriptBuildPhase section */
 

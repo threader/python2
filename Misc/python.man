@@ -338,7 +338,7 @@ These are subject to difference depending on local installation
 conventions; ${prefix} and ${exec_prefix} are installation-dependent
 and should be interpreted as for GNU software; they may be the same.
 The default for both is \fI/usr/local\fP.
-.IP \fI${exec_prefix}/bin/python\fP
+.IP \fI${exec_prefix}/bin/python2\fP
 Recommended location of the interpreter.
 .PP
 .I ${prefix}/lib/python<version>

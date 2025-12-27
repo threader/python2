@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 
 """\
 bundlebuilder.py -- Tools to assemble MacOS X (application) bundles.
@@ -503,8 +503,8 @@ class AppBuilder(BundleBuilder):
             makedirs(execdir)
             if self.standalone or self.semi_standalone:
                 # XXX we're screwed when the end user has deleted
-                # /usr/bin/python
-                hashbang = "/usr/bin/python"
+                # /usr/bin/python2
+                hashbang = "/usr/bin/python2"
             elif self.python:
                 hashbang = self.python
             else:

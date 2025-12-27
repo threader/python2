@@ -29,7 +29,7 @@ if not sys.executable.startswith(sys.exec_prefix):
 
     # Just in case we're not in a framework:
     if not os.path.exists(sys.executable):
-        sys.executable = os.path.join(sys.exec_prefix,  'bin/python')
+        sys.executable = os.path.join(sys.exec_prefix,  'bin/python2')
 
 def main():
     try:

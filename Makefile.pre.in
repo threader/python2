@@ -196,8 +196,8 @@ LIBOBJDIR=	Python/
 LIBOBJS=	@LIBOBJS@
 UNICODE_OBJS=   @UNICODE_OBJS@
 
-PYTHON=		python$(EXE)
-BUILDPYTHON=	python$(BUILDEXE)
+PYTHON=		python2$(EXE)
+BUILDPYTHON=	python2$(BUILDEXE)
 
 PYTHON_FOR_REGEN=@PYTHON_FOR_REGEN@
 PYTHON_FOR_BUILD=@PYTHON_FOR_BUILD@
@@ -987,13 +987,13 @@ bininstall:	altbininstall
 	(cd $(DESTDIR)$(BINDIR); $(LN) -s python$(VERSION)$(EXE) python2$(EXE))
 	-rm -f $(DESTDIR)$(BINDIR)/python2-config
 	(cd $(DESTDIR)$(BINDIR); $(LN) -s python$(VERSION)-config python2-config)
-	-rm -f $(DESTDIR)$(BINDIR)/python-config
-	(cd $(DESTDIR)$(BINDIR); $(LN) -s python2-config python-config)
+	-rm -f $(DESTDIR)$(BINDIR)/python2-config
+	(cd $(DESTDIR)$(BINDIR); $(LN) -s python2-config python2-config)
 	-test -d $(DESTDIR)$(LIBPC) || $(INSTALL) -d -m $(DIRMODE) $(DESTDIR)$(LIBPC)
 	-rm -f $(DESTDIR)$(LIBPC)/python2.pc
 	(cd $(DESTDIR)$(LIBPC); $(LN) -s python-$(VERSION).pc python2.pc)
-	-rm -f $(DESTDIR)$(LIBPC)/python.pc
-	(cd $(DESTDIR)$(LIBPC); $(LN) -s python2.pc python.pc)
+	-rm -f $(DESTDIR)$(LIBPC)/python2.pc
+	(cd $(DESTDIR)$(LIBPC); $(LN) -s python2.pc python2.pc)
 
 # Install the interpreter with $(VERSION) affixed
 # This goes into $(exec_prefix)
@@ -1036,8 +1036,8 @@ altmaninstall:
 maninstall:	altmaninstall
 	-rm -f $(DESTDIR)$(MANDIR)/man1/python2.1
 	(cd $(DESTDIR)$(MANDIR)/man1; $(LN) -s python$(VERSION).1 python2.1)
-	-rm -f $(DESTDIR)$(MANDIR)/man1/python.1
-	(cd $(DESTDIR)$(MANDIR)/man1; $(LN) -s python2.1 python.1)
+	-rm -f $(DESTDIR)$(MANDIR)/man1/python2.1
+	(cd $(DESTDIR)$(MANDIR)/man1; $(LN) -s python2.1 python2.1)
 
 # Install the library
 PLATDIR=	@PLATDIR@
@@ -1177,10 +1177,10 @@ $(srcdir)/Lib/$(PLATDIR):
 	fi; \
 	cd $(srcdir)/Lib/$(PLATDIR); $(RUNSHARED) ./regen
 
-python-config: $(srcdir)/Misc/python-config.in
+python2-config: $(srcdir)/Misc/python2-config.in
 	# Substitution happens here, as the completely-expanded BINDIR
 	# is not available in configure
-	sed -e "s,@EXENAME@,$(BINDIR)/python$(VERSION)$(EXE)," < $(srcdir)/Misc/python-config.in >python-config
+	sed -e "s,@EXENAME@,$(BINDIR)/python$(VERSION)$(EXE)," < $(srcdir)/Misc/python2-config.in >python2-config
 
 # Install the include files
 INCLDIRSTOMAKE=$(INCLUDEDIR) $(CONFINCLUDEDIR) $(INCLUDEPY) $(CONFINCLUDEPY)
@@ -1207,7 +1207,7 @@ LIBPL=		$(LIBP)/config
 # pkgconfig directory
 LIBPC=		$(LIBDIR)/pkgconfig
 
-libainstall:	@DEF_MAKE_RULE@ python-config
+libainstall:	@DEF_MAKE_RULE@ python2-config
 	@for i in $(LIBDIR) $(LIBP) $(LIBPL) $(LIBPC); \
 	do \
 		if test ! -d $(DESTDIR)$$i; then \
@@ -1238,8 +1238,8 @@ libainstall:	@DEF_MAKE_RULE@ python-config
 	$(INSTALL_DATA) Misc/python.pc $(DESTDIR)$(LIBPC)/python-$(VERSION).pc
 	$(INSTALL_SCRIPT) $(srcdir)/Modules/makesetup $(DESTDIR)$(LIBPL)/makesetup
 	$(INSTALL_SCRIPT) $(srcdir)/install-sh $(DESTDIR)$(LIBPL)/install-sh
-	$(INSTALL_SCRIPT) python-config $(DESTDIR)$(BINDIR)/python$(VERSION)-config
-	rm python-config
+	$(INSTALL_SCRIPT) python2-config $(DESTDIR)$(BINDIR)/python$(VERSION)-config
+	rm python2-config
 	@if [ -s Modules/python.exp -a \
 		"`echo $(MACHDEP) | sed 's/^\(...\).*/\1/'`" = "aix" ]; then \
 		echo; echo "Installing support files for building shared extension modules on AIX:"; \
@@ -1318,7 +1318,7 @@ frameworkinstallstructure:	$(LDLIBRARY)
 
 # This installs Mac/Lib into the framework
 # Install a number of symlinks to keep software that expects a normal unix
-# install (which includes python-config) happy.
+# install (which includes python2-config) happy.
 frameworkinstallmaclib:
 	ln -fs "../../../$(PYTHONFRAMEWORK)" "$(DESTDIR)$(prefix)/lib/python$(VERSION)/config/libpython$(VERSION).a"
 	ln -fs "../../../$(PYTHONFRAMEWORK)" "$(DESTDIR)$(prefix)/lib/python$(VERSION)/config/libpython$(VERSION).dylib"
