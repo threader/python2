@@ -16802,7 +16802,7 @@ if test "$Py_OPT" = 'false' -a "$Py_DEBUG" != 'true'; then
     echo "" >&6
     echo "" >&6
     echo "If you want a release build with all optimizations active (LTO, PGO, etc),"
-    echo "please run ./configure --enable-optimizations" >&6
+    echo "please run ./configure --enable-optimizations --with-lto" >&6
     echo "" >&6
     echo "" >&6
 fi
