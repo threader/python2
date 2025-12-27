@@ -570,6 +570,65 @@ class UrlParseTestCase(unittest.TestCase):
             self.assertEqual(p.scheme, "http")
             self.assertEqual(p.geturl(), "http://www.python.org/javascript:alert('msg')/?query=something#fragment")
 
+    def test_urlsplit_strip_url(self):
+        noise = "".join(map(chr, range(0, 0x20 + 1)))
+        base_url = "http://User:Pass@www.python.org:080/doc/?query=yes#frag"
+
+        url = (noise + base_url).decode("utf8")
+        p = urlparse.urlsplit(url)
+        self.assertEqual(p.scheme, u"http")
+        self.assertEqual(p.netloc, u"User:Pass@www.python.org:080")
+        self.assertEqual(p.path, u"/doc/")
+        self.assertEqual(p.query, u"query=yes")
+        self.assertEqual(p.fragment, u"frag")
+        self.assertEqual(p.username, u"User")
+        self.assertEqual(p.password, u"Pass")
+        self.assertEqual(p.hostname, u"www.python.org")
+        self.assertEqual(p.port, 80)
+        self.assertEqual(p.geturl(), base_url.decode("utf8"))
+
+        url = noise + base_url
+        p = urlparse.urlsplit(url)
+        self.assertEqual(p.scheme, b"http")
+        self.assertEqual(p.netloc, b"User:Pass@www.python.org:080")
+        self.assertEqual(p.path, b"/doc/")
+        self.assertEqual(p.query, b"query=yes")
+        self.assertEqual(p.fragment, b"frag")
+        self.assertEqual(p.username, b"User")
+        self.assertEqual(p.password, b"Pass")
+        self.assertEqual(p.hostname, b"www.python.org")
+        self.assertEqual(p.port, 80)
+        self.assertEqual(p.geturl(), base_url)
+
+        # Test that trailing space is preserved as some applications rely on
+        # this within query strings.
+        query_spaces_url = "https://www.python.org:88/doc/?query=    "
+        p = urlparse.urlsplit(noise + query_spaces_url)
+        self.assertEqual(p.scheme, "https")
+        self.assertEqual(p.netloc, "www.python.org:88")
+        self.assertEqual(p.path, "/doc/")
+        self.assertEqual(p.query, "query=    ")
+        self.assertEqual(p.port, 88)
+        self.assertEqual(p.geturl(), query_spaces_url)
+
+        p = urlparse.urlsplit("www.pypi.org ")
+        # That "hostname" gets considered a "path" due to the
+        # trailing space and our existing logic...  YUCK...
+        # and re-assembles via geturl aka unurlsplit into the original.
+        # django.core.validators.URLValidator (at least through v3.2) relies on
+        # this, for better or worse, to catch it in a ValidationError via its
+        # regular expressions.
+        # Here we test the basic round trip concept of such a trailing space.
+        self.assertEqual(urlparse.urlunsplit(p), "www.pypi.org ")
+
+        # with scheme as cache-key
+        url = "//www.python.org/"
+        scheme = noise + "https" + noise
+        for _ in range(2):
+            p = urlparse.urlsplit(url, scheme=scheme)
+            self.assertEqual(p.scheme, "https")
+            self.assertEqual(p.geturl(), "https://www.python.org/")
+
     def test_attributes_bad_port(self):
         """Check handling of non-integer ports."""
         p = urlparse.urlsplit("http://www.example.net:foo")
@@ -579,6 +638,23 @@ class UrlParseTestCase(unittest.TestCase):
         p = urlparse.urlparse("http://www.example.net:foo")
         self.assertEqual(p.netloc, "www.example.net:foo")
         self.assertRaises(ValueError, lambda: p.port)
+
+    def test_attributes_bad_scheme(self):
+        """Check handling of invalid schemes."""
+        for bytes in (False, True):
+            for parse in (urlparse.urlsplit, urlparse.urlparse):
+                for scheme in (u".", u"+", u"-", u"0", u"http&", u"\xe0http"):
+                    url = scheme + u"://www.example.net"
+                    if bytes:
+                        if all(ord(c) < 128 for c in url):
+                            url = url.encode("ascii")
+                        else:
+                            continue
+                    p = parse(url)
+                    if bytes:
+                        self.assertEqual(p.scheme, b"")
+                    else:
+                        self.assertEqual(p.scheme, u"")
 
     def test_attributes_without_netloc(self):
         # This example is straight from RFC 3261.  It looks like it
