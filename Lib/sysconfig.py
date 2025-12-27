@@ -16,6 +16,26 @@ _INSTALL_SCHEMES = {
         'scripts': '{base}/bin',
         'data': '{base}',
         },
+    'posix_local': {
+        'stdlib': '{base}/lib/python{py_version_short}',
+        'platstdlib': '{platbase}/lib/python{py_version_short}',
+        'purelib': '{base}/local/lib/python{py_version_short}/dist-packages',
+        'platlib': '{platbase}/local/lib/python{py_version_short}/dist-packages',
+        'include': '{base}/local/include/python{py_version_short}',
+        'platinclude': '{platbase}/local/include/python{py_version_short}',
+        'scripts': '{base}/local/bin',
+        'data': '{base}/local',
+        },
+    'deb_system': {
+        'stdlib': '{base}/lib/python{py_version_short}',
+        'platstdlib': '{platbase}/lib/python{py_version_short}',
+        'purelib': '{base}/lib/python{py_version_short}/dist-packages',
+        'platlib': '{platbase}/lib/python{py_version_short}/dist-packages',
+        'include': '{base}/include/python{py_version_short}',
+        'platinclude': '{platbase}/include/python{py_version_short}',
+        'scripts': '{base}/bin',
+        'data': '{base}',
+        },
     'posix_home': {
         'stdlib': '{base}/lib/python',
         'platstdlib': '{base}/lib/python',
@@ -134,7 +154,7 @@ def is_python_build():
 _PYTHON_BUILD = is_python_build()
 
 if _PYTHON_BUILD:
-    for scheme in ('posix_prefix', 'posix_home'):
+    for scheme in ('posix_prefix', 'posix_local', 'deb_system', 'posix_home'):
         _INSTALL_SCHEMES[scheme]['include'] = '{projectbase}/Include'
         _INSTALL_SCHEMES[scheme]['platinclude'] = '{srcdir}'
 
@@ -168,7 +188,10 @@ def _expand_vars(scheme, vars):
 
 def _get_default_scheme():
     if os.name == 'posix':
-        # the default scheme for posix is posix_prefix
+        # the default scheme for posix on Debian/Ubuntu is posix_local
+        is_default_prefix = os.path.normpath(sys.exec_prefix or sys.prefix) in ('/usr', '/usr/local')
+        if is_default_prefix and 'PYTHONUSERBASE' not in os.environ and 'real_prefix' not in sys.__dict__:
+            return 'posix_local'
         return 'posix_prefix'
     return os.name
 
@@ -315,7 +338,7 @@ def get_makefile_filename():
     """Return the path of the Makefile."""
     if _PYTHON_BUILD:
         return os.path.join(_PROJECT_BASE, "Makefile")
-    return os.path.join(get_path('platstdlib'), "config", "Makefile")
+    return os.path.join(get_path('platstdlib').replace("/usr/local","/usr",1), "config", "Makefile")
 
 # Issue #22199: retain undocumented private name for compatibility
 _get_makefile_filename = get_makefile_filename
@@ -447,7 +470,7 @@ def get_config_h_filename():
         else:
             inc_dir = _PROJECT_BASE
     else:
-        inc_dir = get_path('platinclude')
+        inc_dir = get_path('platinclude').replace("/usr/local","/usr",1)
     return os.path.join(inc_dir, 'pyconfig.h')
 
 def get_scheme_names():
