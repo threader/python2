@@ -6,12 +6,14 @@ from StringIO import StringIO
 from test import support
 import unittest
 
+import pyexpat
 import xml.dom
 import xml.dom.minidom
 import xml.parsers.expat
 
 from xml.dom.minidom import parse, Node, Document, parseString
 from xml.dom.minidom import getDOMImplementation
+from xml.parsers.expat import ExpatError
 
 
 tstfile = support.findfile("test.xml", subdir="xmltestdata")
@@ -1051,8 +1053,10 @@ class MinidomTest(unittest.TestCase):
 
         # Verify that character decoding errors raise exceptions instead
         # of crashing
-        self.assertRaises(UnicodeDecodeError, parseString,
-                '<fran\xe7ais>Comment \xe7a va ? Tr\xe8s bien ?</fran\xe7ais>')
+        self.assertRaises(ExpatError, parseString,
+                '<fran\xe7ais></fran\xe7ais>')
+        self.assertRaises(ExpatError, parseString,
+                '<franais>Comment \xe7a va ? Tr\xe8s bien ?</franais>')
 
         doc.unlink()
 
