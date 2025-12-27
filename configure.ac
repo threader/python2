@@ -1461,6 +1461,15 @@ if test "$Py_OPT" = 'true' ; then
   DEF_MAKE_ALL_RULE="profile-opt"
   REQUIRE_PGO="yes"
   DEF_MAKE_RULE="build_all"
+  case $CC in
+    *gcc*)
+      # https://developers.redhat.com/blog/2020/06/25/red-hat-enterprise-linux-8-2-brings-faster-python-3-8-run-speeds
+      if "$CC" -v --help 2>/dev/null | grep -- -fsemantic-interposition >/dev/null; then
+        OPT="$OPT -fno-semantic-interposition"
+        LDFLAGS="$LDFLAGS -fno-semantic-interposition"
+      fi
+      ;;
+  esac
 else
   DEF_MAKE_ALL_RULE="build_all"
   REQUIRE_PGO="no"
