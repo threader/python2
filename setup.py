@@ -500,10 +500,10 @@ class PyBuildExt(build_ext):
             os.unlink(tmpfile)
 
     def detect_modules(self):
-        # Ensure that /usr/local is always used
-        if not cross_compiling:
-            add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')
-            add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')
+        # On Debian /usr/local is always used, so we don't include it twice
+        #if not cross_compiling:
+        #    add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')
+        #    add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')
         if cross_compiling:
             self.add_gcc_paths()
         self.add_multiarch_paths()
