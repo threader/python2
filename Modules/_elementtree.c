@@ -47,6 +47,8 @@
 /* Licensed to PSF under a Contributor Agreement. */
 /* See http://www.python.org/psf/license for licensing details. */
 
+#define PY_SSIZE_T_CLEAN
+
 #include "Python.h"
 
 #define VERSION "1.0.6"
@@ -229,8 +231,8 @@ typedef struct {
     PyObject* attrib;
 
     /* child elements */
-    int length; /* actual number of items */
-    int allocated; /* allocated items */
+    Py_ssize_t length; /* actual number of items */
+    Py_ssize_t allocated; /* allocated items */
 
     /* this either points to _children or to a malloced buffer */
     PyObject* *children;
@@ -358,7 +360,7 @@ element_resize(ElementObject* self, Py_ssize_t extra)
     if (!self->extra)
         element_new_extra(self, NULL);
 
-    size = self->extra->length + extra;
+    size = self->extra->length + extra;  /* never overflows */
 
     if (size > self->extra->allocated) {
         /* use Python 2.4's list growth strategy */
@@ -609,7 +611,7 @@ element_clear(ElementObject* self, PyObject* args)
 static PyObject*
 element_copy(ElementObject* self, PyObject* args)
 {
-    int i;
+    Py_ssize_t i;
     ElementObject* element;
 
     if (!PyArg_ParseTuple(args, ":__copy__"))
@@ -649,7 +651,7 @@ element_copy(ElementObject* self, PyObject* args)
 static PyObject*
 element_deepcopy(ElementObject* self, PyObject* args)
 {
-    int i;
+    Py_ssize_t i;
     ElementObject* element;
     PyObject* tag;
     PyObject* attrib;
@@ -889,7 +891,7 @@ element_findtext(ElementObject* self, PyObject* args)
 static PyObject*
 element_findall(ElementObject* self, PyObject* args)
 {
-    int i;
+    Py_ssize_t i;
     PyObject* out;
 
     PyObject* tag;
@@ -966,7 +968,7 @@ element_get(ElementObject* self, PyObject* args)
 static PyObject*
 element_getchildren(ElementObject* self, PyObject* args)
 {
-    int i;
+    Py_ssize_t i;
     PyObject* list;
 
     if (PyErr_WarnPy3k("This method will be removed in future versions.  "
@@ -1100,11 +1102,9 @@ element_getitem(PyObject* self_, Py_ssize_t index)
 static PyObject*
 element_insert(ElementObject* self, PyObject* args)
 {
-    int i;
-
-    int index;
+    Py_ssize_t index, i;
     PyObject* element;
-    if (!PyArg_ParseTuple(args, "iO!:insert", &index,
+    if (!PyArg_ParseTuple(args, "nO!:insert", &index,
                           &Element_Type, &element))
         return NULL;
 
@@ -2094,7 +2094,7 @@ staticforward PyTypeObject XMLParser_Type;
 LOCAL(int)
 checkstring(const char* string, int size)
 {
-    int i;
+    Py_ssize_t i;
 
     /* check if an 8-bit string contains UTF-8 characters */
     for (i = 0; i < size; i++)
