@@ -59,7 +59,11 @@ class TestUntestedModules(unittest.TestCase):
             import os2emxpath
             import pdb
             import posixfile
-            import pstats
+            try:
+                import pstats  # separated out into the python-profiler package
+            except ImportError:
+                if test_support.verbose:
+                    print "skipping profile and pstats"
             import py_compile
             import rexec
             import sched
