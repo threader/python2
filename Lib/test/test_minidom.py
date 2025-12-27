@@ -1055,7 +1055,13 @@ class MinidomTest(unittest.TestCase):
         # of crashing
         self.assertRaises(ExpatError, parseString,
                 '<fran\xe7ais></fran\xe7ais>')
-        self.assertRaises(ExpatError, parseString,
+        if pyexpat.version_info >= (2, 4, 5):
+            self.assertRaises(ExpatError, parseString,
+                    b'<fran\xe7ais></fran\xe7ais>')
+            self.assertRaises(ExpatError, parseString,
+                    b'<franais>Comment \xe7a va ? Tr\xe8s bien ?</franais>')
+        else:
+            self.assertRaises(UnicodeDecodeError, parseString,
                 '<franais>Comment \xe7a va ? Tr\xe8s bien ?</franais>')
 
         doc.unlink()
