@@ -1196,6 +1196,8 @@ python2-config: $(srcdir)/Misc/python2-config.in
 	# Substitution happens here, as the completely-expanded BINDIR
 	# is not available in configure
 	sed -e "s,@EXENAME@,$(BINDIR)/python$(VERSION)$(EXE)," < $(srcdir)/Misc/python2-config.in >python2-config
+	# Replace makefile compat. variable references with shell script compat. ones; $(VAR) -> ${VAR}
+	sed -e "s,\$$(\([A-Za-z0-9_]*\)),\$$\{\1\},g" < Misc/python-config2.sh >python-config2.sh
 
 # Install the include files
 INCLDIRSTOMAKE=$(INCLUDEDIR) $(CONFINCLUDEDIR) $(INCLUDEPY) $(CONFINCLUDEPY)
@@ -1255,6 +1257,7 @@ libainstall:	@DEF_MAKE_RULE@ python2-config
 	$(INSTALL_SCRIPT) $(srcdir)/install-sh $(DESTDIR)$(LIBPL)/install-sh
 	$(INSTALL_SCRIPT) python2-config $(DESTDIR)$(BINDIR)/python$(VERSION)-config
 	rm python2-config
+	$(INSTALL_SCRIPT) python-config2.sh $(DESTDIR)$(BINDIR)/python-config2.sh
 	@if [ -s Modules/python.exp -a \
 		"`echo $(MACHDEP) | sed 's/^\(...\).*/\1/'`" = "aix" ]; then \
 		echo; echo "Installing support files for building shared extension modules on AIX:"; \

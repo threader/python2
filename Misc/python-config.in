@@ -56,3 +56,11 @@ for opt in opt_flags:
                 libs.extend(getvar('LINKFORSHARED').split())
         print ' '.join(libs)
 
+    elif opt == '--extension-suffix':
+        print sysconfig.get_config_var('SO')
+
+    elif opt == '--abiflags':
+        print ''
+
+    elif opt == '--configdir':
+        print sysconfig.get_config_var('LIBPL')
