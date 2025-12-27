@@ -43,7 +43,7 @@ extern "C" {
 
 extern char *Py_GetPath(void);
 
-extern grammar _PyParser_Grammar; /* From graminit.c */
+extern Py_EXPORTED_SYMBOL grammar _PyParser_Grammar; /* From graminit.c */
 
 /* Forward */
 static void initmain(void);

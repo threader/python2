@@ -2,6 +2,8 @@
  * Declarations shared between the different parts of the io module
  */
 
+#include "exports.h"
+
 /* ABCs */
 extern PyTypeObject PyIOBase_Type;
 extern PyTypeObject PyRawIOBase_Type;
