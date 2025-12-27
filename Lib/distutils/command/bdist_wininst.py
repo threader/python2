@@ -14,6 +14,7 @@ from sysconfig import get_python_version
 from distutils.core import Command
 from distutils.dir_util import remove_tree
 from distutils.errors import DistutilsOptionError, DistutilsPlatformError
+from distutils.errors import DistutilsFileError
 from distutils import log
 from distutils.util import get_platform
 
@@ -360,7 +361,10 @@ class bdist_wininst (Command):
             sfix = ''
 
         filename = os.path.join(directory, "wininst-%.1f%s.exe" % (bv, sfix))
-        f = open(filename, "rb")
+        try:
+            f = open(filename, "rb")
+        except IOError, msg:
+            raise DistutilsFileError, str(msg) + ', %s not included in the Debian packages.' % filename
         try:
             return f.read()
         finally:
