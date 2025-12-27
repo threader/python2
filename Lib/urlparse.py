@@ -62,6 +62,9 @@ scheme_chars = ('abcdefghijklmnopqrstuvwxyz'
                 '0123456789'
                 '+-.')
 
+# Unsafe bytes to be removed per WHATWG spec
+_UNSAFE_URL_BYTES_TO_REMOVE = ['\t', '\r', '\n']
+
 MAX_CACHE_SIZE = 20
 _parse_cache = {}
 
@@ -190,6 +193,11 @@ def urlsplit(url, scheme='', allow_fragments=True):
     Return a 5-tuple: (scheme, netloc, path, query, fragment).
     Note that we don't break the components up in smaller bits
     (e.g. netloc is a single string) and we don't expand % escapes."""
+
+    for b in _UNSAFE_URL_BYTES_TO_REMOVE:
+        url = url.replace(b, "")
+        scheme = scheme.replace(b, "")
+
     allow_fragments = bool(allow_fragments)
     key = url, scheme, allow_fragments, type(url), type(scheme)
     cached = _parse_cache.get(key, None)
