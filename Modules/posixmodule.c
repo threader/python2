@@ -9320,11 +9320,13 @@ all_ins(PyObject *d)
 #ifdef O_LARGEFILE
     if (ins(d, "O_LARGEFILE", (long)O_LARGEFILE)) return -1;
 #endif
+#ifndef __GNU__
 #ifdef O_SHLOCK
     if (ins(d, "O_SHLOCK", (long)O_SHLOCK)) return -1;
 #endif
 #ifdef O_EXLOCK
     if (ins(d, "O_EXLOCK", (long)O_EXLOCK)) return -1;
+#endif
 #endif
 
 /* MS Windows */
