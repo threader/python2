@@ -511,8 +511,16 @@ then
 fi
 AC_MSG_RESULT($MACHDEP)
 
+MULTIARCH=$($CC --print-multiarch 2>/dev/null)
+AC_SUBST(MULTIARCH)
+
+
 AC_SUBST(PLATDIR)
-PLATDIR=plat-$MACHDEP
+if test -n "$MULTIARCH"; then
+  PLATDIR=plat-$MULTIARCH
+else
+  PLATDIR=plat-$MACHDEP
+fi
 
 # And add extra plat-mac for darwin
 AC_SUBST(EXTRAPLATDIR)

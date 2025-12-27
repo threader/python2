@@ -1453,6 +1453,8 @@ _PySys_Init(void)
                         PyFloat_GetInfo());
     SET_SYS_FROM_STRING("long_info",
                         PyLong_GetInfo());
+    SET_SYS_FROM_STRING("_multiarch",
+                        PyString_FromString(MULTIARCH));
 #ifdef Py_USING_UNICODE
     SET_SYS_FROM_STRING("maxunicode",
                         PyInt_FromLong(PyUnicode_GetMax()));

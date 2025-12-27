@@ -79,8 +79,6 @@ def get_python_inc(plat_specific=0, prefix=None):
     If 'prefix' is supplied, use it instead of sys.prefix or
     sys.exec_prefix -- i.e., ignore 'plat_specific'.
     """
-    if prefix is None:
-        prefix = plat_specific and EXEC_PREFIX or PREFIX
 
     if os.name == "posix":
         if python_build:
@@ -100,7 +98,14 @@ def get_python_inc(plat_specific=0, prefix=None):
                 # Include is located in the srcdir
                 inc_dir = os.path.join(srcdir, "Include")
             return inc_dir
-        return os.path.join(prefix, "include", "python" + get_python_version())+(sys.pydebug and "_d" or "")
+        else:
+            if not (prefix is None):
+                return os.path.join(prefix, "include",
+                                    "python" + get_python_version())+(sys.pydebug and "_d" or "")
+            if plat_specific:
+                return get_config_var('CONFINCLUDEPY')
+            else:
+                return get_config_var('INCLUDEPY')
     elif os.name == "nt":
         return os.path.join(prefix, "include")
     elif os.name == "os2":
@@ -270,7 +275,7 @@ def get_makefile_filename():
     if python_build:
         return os.path.join(project_base, "Makefile")
     lib_dir = get_python_lib(plat_specific=1, standard_lib=1)
-    return os.path.join(lib_dir, "config"+(sys.pydebug and "_d" or ""), "Makefile")
+    return os.path.join(get_config_var('LIBPL'), "Makefile")
 
 
 def parse_config_h(fp, g=None):

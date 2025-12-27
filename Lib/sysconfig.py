@@ -338,7 +338,7 @@ def get_makefile_filename():
     """Return the path of the Makefile."""
     if _PYTHON_BUILD:
         return os.path.join(_PROJECT_BASE, "Makefile")
-    return os.path.join(get_path('platstdlib').replace("/usr/local","/usr",1), "config" + (sys.pydebug and "_d" or ""), "Makefile")
+    return os.path.join(get_config_var('LIBPL'), "Makefile")
 
 # Issue #22199: retain undocumented private name for compatibility
 _get_makefile_filename = get_makefile_filename
@@ -536,6 +536,12 @@ def get_config_vars(*args):
         # init function to enable using 'get_config_var' in
         # the init-function.
         _CONFIG_VARS['userbase'] = _getuserbase()
+
+        multiarch = get_config_var('MULTIARCH')
+        if multiarch:
+            _CONFIG_VARS['multiarchsubdir'] = '/' + multiarch
+        else:
+            _CONFIG_VARS['multiarchsubdir'] = ''
 
         if 'srcdir' not in _CONFIG_VARS:
             _CONFIG_VARS['srcdir'] = _PROJECT_BASE

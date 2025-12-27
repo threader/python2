@@ -101,6 +101,9 @@ MACHDEP=	@MACHDEP@
 # Multiarch directory (may be empty)
 MULTIARCH=	@MULTIARCH@
 
+# Multiarch directory (may be empty)
+MULTIARCH=	@MULTIARCH@
+
 # Install prefix for architecture-independent files
 prefix=		@prefix@
 
@@ -622,6 +625,10 @@ Makefile Modules/config.c: Makefile.pre \
 	@mv config.c Modules
 	@echo "The Makefile was updated, you may need to re-run make."
 
+Python/dynload_shlib.o: $(srcdir)/Python/dynload_shlib.c Makefile
+	$(CC) -c $(PY_CORE_CFLAGS) \
+		$(if $(MULTIARCH),-DMULTIARCH='"$(MULTIARCH)"') \
+		-o $@ $(srcdir)/Python/dynload_shlib.c
 
 Modules/Setup: $(srcdir)/Modules/Setup.dist
 	@if test -f Modules/Setup; then \
@@ -1210,10 +1217,10 @@ inclinstall:
 
 # Install the library and miscellaneous stuff needed for extending/embedding
 # This goes into $(exec_prefix)$(DEBUG_EXT)
-LIBPL=		$(LIBP)/config$(DEBUG_EXT)
+LIBPL=		$(LIBP)/config-$(MULTIARCH)$(DEBUG_EXT)
 
 # pkgconfig directory
-LIBPC=		$(LIBDIR)/pkgconfig
+LIBPC=		$(LIBDIR)/$(MULTIARCH)/pkgconfig
 
 libainstall:	@DEF_MAKE_RULE@ python2-config
 	@for i in $(LIBDIR) $(LIBP) $(LIBPL) $(LIBPC); \
@@ -1492,6 +1499,11 @@ patchcheck:
 # Dependencies
 
 Python/thread.o: @THREADHEADERS@
+
+Python/sysmodule.o: $(srcdir)/Python/sysmodule.c Makefile
+	$(CC) -c $(PY_CORE_CFLAGS) \
+		-DMULTIARCH='"$(MULTIARCH)"' \
+		-o $@ $(srcdir)/Python/sysmodule.c
 
 # Declare targets that aren't real files
 .PHONY: all build_all sharedmods check-clean-src oldsharedmods test quicktest memtest
