@@ -647,14 +647,13 @@ if test "$MACHDEP" = "irix6" && test "$CC" != "gcc"; then
     fi
 fi
 
-# If the user set CFLAGS, use this instead of the automatically
-# determined setting
-preset_cflags="$CFLAGS"
-AC_PROG_CC
-if test ! -z "$preset_cflags"
-then
-	CFLAGS=$preset_cflags
+# Don't let AC_PROG_CC set the default CFLAGS. It normally sets -g -O2
+# when the compiler supports them, but we don't always want -O2, and
+# we set -g later.
+if test -z "$CFLAGS"; then
+        CFLAGS=
 fi
+AC_PROG_CC
 
 AC_SUBST(CXX)
 AC_SUBST(MAINCC)
