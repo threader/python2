@@ -18240,7 +18240,7 @@ printf "%s\n" "$ENSUREPIP" >&6; }
 
 
 # generate output files
-ac_config_files="$ac_config_files Makefile.pre Modules/Setup.config Misc/python.pc Misc/python-config.sh"
+ac_config_files="$ac_config_files Makefile.pre Modules/Setup.config Misc/python.pc Misc/python2-config.sh"
 
 ac_config_files="$ac_config_files Modules/ld_so_aix"
 
@@ -18943,7 +18943,7 @@ do
     "Makefile.pre") CONFIG_FILES="$CONFIG_FILES Makefile.pre" ;;
     "Modules/Setup.config") CONFIG_FILES="$CONFIG_FILES Modules/Setup.config" ;;
     "Misc/python.pc") CONFIG_FILES="$CONFIG_FILES Misc/python.pc" ;;
-    "Misc/python-config.sh") CONFIG_FILES="$CONFIG_FILES Misc/python-config.sh" ;;
+    "Misc/python2-config.sh") CONFIG_FILES="$CONFIG_FILES Misc/python2-config.sh" ;;
     "Modules/ld_so_aix") CONFIG_FILES="$CONFIG_FILES Modules/ld_so_aix" ;;
 
   *) as_fn_error $? "invalid argument: '$ac_config_target'" "$LINENO" 5;;
