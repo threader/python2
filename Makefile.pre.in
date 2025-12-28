@@ -972,6 +972,13 @@ commoninstall:	check-clean-src @FRAMEWORKALTINSTALLFIRST@ \
 		altbininstall libinstall inclinstall libainstall \
 		sharedinstall oldsharedinstall altmaninstall \
 		@FRAMEWORKALTINSTALLLAST@
+	$(INSTALL) -m 755 -d $(DESTDIR)$(PREFIX)/bin \
+		$(DESTDIR)$(PREFIX)/share/perl5/Debian/Debhelper/Sequence/
+	$(INSTALL) -m 644 python2.pm $(DESTDIR)$(PREFIX)/share/perl5/Debian/Debhelper/Sequence/
+	$(INSTALL) -m 755 pycompile $(DESTDIR)$(PREFIX)/bin/
+	$(INSTALL) -m 755 pyclean $(DESTDIR)$(PREFIX)/bin/
+	$(INSTALL) -m 755 dh_python2 $(DESTDIR)$(PREFIX)/bin/dh_python2
+#	$(INSTALL) -m 755 dh_python2.py $(DESTDIR)$(PREFIX)/bin/dh_python2
 
 # Install shared libraries enabled by Setup
 DESTDIRS=	$(exec_prefix) $(LIBDIR) $(BINLIBDEST) $(DESTSHARED)
