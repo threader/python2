@@ -223,7 +223,6 @@ def customize_compiler(compiler):
             ldcxxshared = ldcxxshared + ' ' + os.environ['LDFLAGS']
         elif configure_ldflags:
             ldshared = ldshared + ' ' + configure_ldflags
-            ldcxxshared = ldcxxshared + ' ' + os.environ['LDFLAGS']
         if 'BASECFLAGS' in os.environ:
             basecflags = os.environ['BASECFLAGS']
         if 'CXXFLAGS' in os.environ:
