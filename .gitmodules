@@ -1,4 +1,4 @@
-[submodule "debian"]
-	path = .
-	url = https://github.com/threader/debian_python2
+#[submodule "debian"]
+#	path = .
+#	url = https://github.com/threader/debian_python2
 	# url = https://salsa.debian.org/cpython-team/python2.git
