@@ -1061,9 +1061,8 @@ class MinidomTest(unittest.TestCase):
             self.assertRaises(ExpatError, parseString,
                     b'<franais>Comment \xe7a va ? Tr\xe8s bien ?</franais>')
         else:
-            self.assertRaises(UnicodeDecodeError, parseString,
-        self.assertRaises((UnicodeDecodeError, xml.parsers.expat.ExpatError), parseString,
-                '<fran\xe7ais>Comment \xe7a va ? Tr\xe8s bien ?</fran\xe7ais>')
+            self.assertRaises((UnicodeDecodeError, xml.parsers.expat.ExpatError), parseString,
+               b '<fran\xe7ais>Comment \xe7a va ? Tr\xe8s bien ?</fran\xe7ais>')
 
         doc.unlink()
 
