@@ -1,0 +1,15 @@
+Index: b/Doc/tools/templates/layout.html
+===================================================================
+--- a/Doc/tools/templates/layout.html
++++ b/Doc/tools/templates/layout.html
+@@ -3,8 +3,8 @@
+ {%- if outdated %}
+ <div id="outdated-warning" style="padding: .5em; text-align: center; background-color: #FFBABA; color: #6A0E0E;">
+     {% trans %}This document is for an old version of Python that is {% endtrans %}<a href="https://devguide.python.org/devcycle/#end-of-life-branches">{% trans %}no longer supported{% endtrans %}</a>.
+-    {% trans %}You should upgrade and read the {% endtrans %}
+-    <a href="https://docs.python.org/{{ language + '/' if language and language != 'en' else '' }}3/{{ pagename }}{{ file_suffix }}">{% trans %} Python documentation for the current stable release{% endtrans %}</a>.
++    {% trans %}You should install the python3 and python3-doc packages and read the {% endtrans %}
++    <a href="file:///usr/share/doc/python3-doc/html/{{ language + '/' if language and language != 'en' else '' }}{{ pagename }}{{ file_suffix }}">{% trans %} Python documentation for the Python3 version packaged in this release{% endtrans %}</a>.
+ </div>
+ {%- endif %}
+ {% endblock %}

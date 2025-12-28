@@ -1,0 +1,124 @@
+Index: b/Modules/md5.c
+===================================================================
+--- a/Modules/md5.c
++++ b/Modules/md5.c
+@@ -311,7 +311,7 @@ md5_process(md5_state_t *pms, const md5_
+ }
+ 
+ void
+-md5_init(md5_state_t *pms)
++_Py_md5_init(md5_state_t *pms)
+ {
+     pms->count[0] = pms->count[1] = 0;
+     pms->abcd[0] = 0x67452301;
+@@ -321,7 +321,7 @@ md5_init(md5_state_t *pms)
+ }
+ 
+ void
+-md5_append(md5_state_t *pms, const md5_byte_t *data, unsigned int nbytes)
++_Py_md5_append(md5_state_t *pms, const md5_byte_t *data, unsigned int nbytes)
+ {
+     const md5_byte_t *p = data;
+     unsigned int left = nbytes;
+@@ -338,8 +338,8 @@ md5_append(md5_state_t *pms, const md5_b
+         /* handle the append in two steps to prevent overflow */
+         overlap = 64 - offset;
+ 
+-        md5_append(pms, data, overlap);
+-        md5_append(pms, data + overlap, nbytes - overlap);
++        _Py_md5_append(pms, data, overlap);
++        _Py_md5_append(pms, data + overlap, nbytes - overlap);
+         return;
+     }
+ 
+@@ -371,7 +371,7 @@ md5_append(md5_state_t *pms, const md5_b
+ }
+ 
+ void
+-md5_finish(md5_state_t *pms, md5_byte_t digest[16])
++_Py_md5_finish(md5_state_t *pms, md5_byte_t digest[16])
+ {
+     static const md5_byte_t pad[64] = {
+         0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+@@ -386,9 +386,9 @@ md5_finish(md5_state_t *pms, md5_byte_t
+     for (i = 0; i < 8; ++i)
+         data[i] = (md5_byte_t)(pms->count[i >> 2] >> ((i & 3) << 3));
+     /* Pad to 56 bytes mod 64. */
+-    md5_append(pms, pad, ((55 - (pms->count[0] >> 3)) & 63) + 1);
++    _Py_md5_append(pms, pad, ((55 - (pms->count[0] >> 3)) & 63) + 1);
+     /* Append the length. */
+-    md5_append(pms, data, 8);
++    _Py_md5_append(pms, data, 8);
+     for (i = 0; i < 16; ++i)
+         digest[i] = (md5_byte_t)(pms->abcd[i >> 2] >> ((i & 3) << 3));
+ }
+Index: b/Modules/md5.h
+===================================================================
+--- a/Modules/md5.h
++++ b/Modules/md5.h
+@@ -76,13 +76,13 @@ extern "C"
+ #endif
+ 
+ /* Initialize the algorithm. */
+-void md5_init(md5_state_t *pms);
++void _Py_md5_init(md5_state_t *pms);
+ 
+ /* Append a string to the message. */
+-void md5_append(md5_state_t *pms, const md5_byte_t *data, unsigned int nbytes);
++void _Py_md5_append(md5_state_t *pms, const md5_byte_t *data, unsigned int nbytes);
+ 
+ /* Finish the message and return the digest. */
+-void md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
++void _Py_md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
+ 
+ #ifdef __cplusplus
+ }  /* end extern "C" */
+Index: b/Modules/md5module.c
+===================================================================
+--- a/Modules/md5module.c
++++ b/Modules/md5module.c
+@@ -31,7 +31,7 @@ newmd5object(void)
+     if (md5p == NULL)
+         return NULL;
+ 
+-    md5_init(&md5p->md5);       /* actual initialisation */
++    _Py_md5_init(&md5p->md5);       /* actual initialisation */
+     return md5p;
+ }
+ 
+@@ -65,7 +65,7 @@ md5_update(md5object *self, PyObject *ar
+             nbytes = INT_MAX;
+         else
+             nbytes = n;
+-        md5_append(&self->md5, buf,
++        _Py_md5_append(&self->md5, buf,
+                    Py_SAFE_DOWNCAST(nbytes, Py_ssize_t, unsigned int));
+         buf += nbytes;
+         n -= nbytes;
+@@ -91,7 +91,7 @@ md5_digest(md5object *self)
+ 
+     /* make a temporary copy, and perform the final */
+     mdContext = self->md5;
+-    md5_finish(&mdContext, aDigest);
++    _Py_md5_finish(&mdContext, aDigest);
+ 
+     return PyString_FromStringAndSize((char *)aDigest, 16);
+ }
+@@ -114,7 +114,7 @@ md5_hexdigest(md5object *self)
+ 
+     /* make a temporary copy, and perform the final */
+     mdContext = self->md5;
+-    md5_finish(&mdContext, digest);
++    _Py_md5_finish(&mdContext, digest);
+ 
+     /* Make hex version of the digest */
+     for(i=j=0; i<16; i++) {
+@@ -294,7 +294,7 @@ MD5_new(PyObject *self, PyObject *args)
+             nbytes = INT_MAX;
+         else
+             nbytes = n;
+-        md5_append(&md5p->md5, buf,
++        _Py_md5_append(&md5p->md5, buf,
+                    Py_SAFE_DOWNCAST(nbytes, Py_ssize_t, unsigned int));
+         buf += nbytes;
+         n -= nbytes;

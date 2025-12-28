@@ -1,0 +1,27 @@
+Index: b/Doc/tools/templates/layout.html
+===================================================================
+--- a/Doc/tools/templates/layout.html
++++ b/Doc/tools/templates/layout.html
+@@ -17,7 +17,7 @@
+ {% block relbar2 %} {% if builder != 'qthelp' %} {{ relbar() }} {% endif %} {% endblock %}
+ {% block extrahead %}
+     <link rel="shortcut icon" type="image/png" href="{{ pathto('_static/py.png', 1) }}" />
+-    <link rel="canonical" href="https://docs.python.org/2/{{pagename}}.html" />
++    <link rel="canonical" href="file:///usr/share/doc/python2.7/html/{{pagename}}.html" />
+     {% if not embedded %}<script type="text/javascript" src="{{ pathto('_static/copybutton.js', 1) }}"></script>{% endif %}
+     {% if switchers is defined and not embedded %}<script type="text/javascript" src="{{ pathto('_static/switchers.js', 1) }}"></script>{% endif %}
+ {{ super() }}
+Index: b/Misc/python.man
+===================================================================
+--- a/Misc/python.man
++++ b/Misc/python.man
+@@ -456,7 +456,8 @@ The Python Software Foundation: https://
+ .SH INTERNET RESOURCES
+ Main website:  https://www.python.org/
+ .br
+-Documentation:  https://docs.python.org/2/
++Documentation:  file:///usr/share/doc/python2.7/html/index.html (python-doc package)
++or https://docs.python.org/2/
+ .br
+ Developer resources:  https://docs.python.org/devguide/
+ .br

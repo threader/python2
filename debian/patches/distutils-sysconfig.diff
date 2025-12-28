@@ -1,0 +1,57 @@
+# DP: Allow setting BASECFLAGS, OPT and EXTRA_LDFLAGS (like, CC, CXX, CPP,
+# DP: CFLAGS, CPPFLAGS, CCSHARED, LDSHARED) from the environment.
+
+--- a/Lib/distutils/sysconfig.py
++++ b/Lib/distutils/sysconfig.py
+@@ -184,10 +184,12 @@ def customize_compiler(compiler):
+                 _osx_support.customize_compiler(_config_vars)
+                 _config_vars['CUSTOMIZED_OSX_COMPILER'] = 'True'
+ 
+-        (cc, cxx, cflags, ccshared, ldshared, so_ext, ar, ar_flags) = \
+-            get_config_vars('CC', 'CXX', 'CFLAGS',
+-                            'CCSHARED', 'LDSHARED', 'SO', 'AR',
+-                            'ARFLAGS')
++        (cc, cxx, cflags, extra_cflags, basecflags,
++         ccshared, ldshared, so_ext, ar, ar_flags,
++         configure_cppflags, configure_cflags, configure_ldflags) = \
++            get_config_vars('CC', 'CXX', 'CFLAGS', 'EXTRA_CFLAGS', 'BASECFLAGS',
++                            'CCSHARED', 'LDSHARED', 'SO', 'AR', 'ARFLAGS',
++                            'CONFIGURE_CPPFLAGS', 'CONFIGURE_CFLAGS', 'CONFIGURE_LDFLAGS')
+ 
+         if 'CC' in os.environ:
+             newcc = os.environ['CC']
+@@ -208,13 +210,24 @@ def customize_compiler(compiler):
+             cpp = cc + " -E"           # not always
+         if 'LDFLAGS' in os.environ:
+             ldshared = ldshared + ' ' + os.environ['LDFLAGS']
++        elif configure_ldflags:
++            ldshared = ldshared + ' ' + configure_ldflags
++        if 'BASECFLAGS' in os.environ:
++            basecflags = os.environ['BASECFLAGS']
+         if 'CFLAGS' in os.environ:
+-            cflags = cflags + ' ' + os.environ['CFLAGS']
++            cflags = ' '.join(str(x) for x in (basecflags, os.environ['CFLAGS'], extra_cflags) if x)
+             ldshared = ldshared + ' ' + os.environ['CFLAGS']
++        elif configure_cflags:
++            cflags = ' '.join(str(x) for x in (basecflags, configure_cflags, extra_cflags) if x)
++            ldshared = ldshared + ' ' + configure_cflags
+         if 'CPPFLAGS' in os.environ:
+             cpp = cpp + ' ' + os.environ['CPPFLAGS']
+             cflags = cflags + ' ' + os.environ['CPPFLAGS']
+             ldshared = ldshared + ' ' + os.environ['CPPFLAGS']
++        elif configure_cppflags:
++            cpp = cpp + ' ' + configure_cppflags
++            cflags = cflags + ' ' + configure_cppflags
++            ldshared = ldshared + ' ' + configure_cppflags
+         if 'AR' in os.environ:
+             ar = os.environ['AR']
+         if 'ARFLAGS' in os.environ:
+@@ -228,7 +241,7 @@ def customize_compiler(compiler):
+             compiler=cc_cmd,
+             compiler_so=cc_cmd + ' ' + ccshared,
+             compiler_cxx=cxx,
+-            linker_so=ldshared,
++            linker_so=ldshared + ' ' + ccshared,
+             linker_exe=cc,
+             archiver=archiver)
+ 
