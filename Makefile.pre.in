@@ -239,7 +239,8 @@ MODULE_OBJS=	\
 		Modules/config.o \
 		Modules/getpath.o \
 		Modules/main.o \
-		Modules/gcmodule.o
+		Modules/gcmodule.o \
+		Modules/pytime.o
 
 # Used of signalmodule.o is not available
 SIGNAL_OBJS=	@SIGNAL_OBJS@
@@ -946,7 +947,7 @@ install:
 	 $(MAKE) install_internal
 
 # Install everything
-install:	@FRAMEWORKINSTALLFIRST@ commoninstall bininstall maninstall @FRAMEWORKINSTALLLAST@
+install_internal:	@FRAMEWORKINSTALLFIRST@ commoninstall bininstall maninstall @FRAMEWORKINSTALLLAST@
 	if test "x$(ENSUREPIP)" != "xno"  ; then \
 		case $(ENSUREPIP) in \
 			upgrade) ensurepip="--upgrade" ;; \
@@ -1039,6 +1040,19 @@ altbininstall:	$(BUILDPYTHON)
 			if test $(LDLIBRARY) != $(INSTSONAME); then \
 				(cd $(DESTDIR)$(LIBDIR); $(LN) -sf $(INSTSONAME) $(LDLIBRARY)) \
 			fi \
+		fi; \
+	else	true; \
+	fi
+	@if test -f $(LIBRARY) && test $(LIBRARY) != $(LDLIBRARY); then \
+		if test "$(PYTHONFRAMEWORKDIR)" = no-framework; then \
+			if test "$(SO)" = .dll; then \
+				$(INSTALL_DATA) $(LDLIBRARY) $(DESTDIR)$(LIBDIR); \
+			else \
+				$(INSTALL_DATA) $(LIBRARY) $(DESTDIR)$(LIBDIR); \
+				$(RANLIB) $(DESTDIR)$(LIBDIR)/$(LIBRARY); \
+			fi; \
+		else \
+			echo "Skipped install of $(LIBRARY) - use make frameworkinstall"; \
 		fi; \
 	else	true; \
 	fi
@@ -1242,18 +1256,6 @@ libainstall:	@DEF_MAKE_RULE@ python2-config
 		else	true; \
 		fi; \
 	done
-	@if test -d $(LIBRARY); then :; else \
-		if test "$(PYTHONFRAMEWORKDIR)" = no-framework; then \
-			if test "$(SO)" = .dll; then \
-				$(INSTALL_DATA) $(LDLIBRARY) $(DESTDIR)$(LIBPL) ; \
-			else \
-				$(INSTALL_DATA) $(LIBRARY) $(DESTDIR)$(LIBPL)/$(LIBRARY) ; \
-				$(RANLIB) $(DESTDIR)$(LIBPL)/$(LIBRARY) ; \
-			fi; \
-		else \
-			echo Skip install of $(LIBRARY) - use make frameworkinstall; \
-		fi; \
-	fi
 	$(INSTALL_DATA) Modules/config.c $(DESTDIR)$(LIBPL)/config.c
 	$(INSTALL_DATA) Modules/python.o $(DESTDIR)$(LIBPL)/python.o
 	$(INSTALL_DATA) $(srcdir)/Modules/config.c.in $(DESTDIR)$(LIBPL)/config.c.in
