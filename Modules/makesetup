@@ -219,7 +219,7 @@ sed -e 's/[ 	]*#.*//' -e '/^[ 	]*$/d' |
 			case $doconfig in
 			no)	cc="$cc \$(CCSHARED) \$(CFLAGS) \$(CPPFLAGS)";;
 			*)
-				cc="$cc \$(PY_CFLAGS)";;
+				cc="$cc \$(PY_CORE_CFLAGS)";;
 			esac
 			rule="$obj: $src; $cc $cpps -c $src -o $obj"
 			echo "$rule" >>$rulesf
@@ -281,7 +281,7 @@ sed -e 's/[ 	]*#.*//' -e '/^[ 	]*$/d' |
 	-)	;;
 	*)	sedf="@sed.in.$$"
 		trap 'rm -f $sedf' 0 1 2 3
-		echo "1i\\" >$sedf
+		printf "1i\\" >$sedf
 		str="# Generated automatically from $makepre by makesetup."
 		echo "$str" >>$sedf
 		echo "s%_MODOBJS_%$OBJS%" >>$sedf

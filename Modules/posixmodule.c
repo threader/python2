@@ -11,29 +11,140 @@
    compiler is assumed to be IBM's VisualAge C++ (VACPP).  PYCC_GCC is used
    as the compiler specific macro for the EMX port of gcc to OS/2. */
 
-#ifdef __APPLE__
-   /*
-    * Step 1 of support for weak-linking a number of symbols existing on
-    * OSX 10.4 and later, see the comment in the #ifdef __APPLE__ block
-    * at the end of this file for more information.
-    */
-#  pragma weak lchown
-#  pragma weak statvfs
-#  pragma weak fstatvfs
-
-#endif /* __APPLE__ */
-
 #define PY_SSIZE_T_CLEAN
 
 #include "Python.h"
 #include "structseq.h"
-#ifndef MS_WINDOWS
+#ifdef MS_WINDOWS
+#include <Windows.h>
+#else
 #include "posixmodule.h"
 #endif
 
 #if defined(__VMS)
 #    include <unixio.h>
 #endif /* defined(__VMS) */
+
+/*
+ * A number of APIs are available on macOS from a certain macOS version.
+ * To support building with a new SDK while deploying to older versions
+ * the availability test is split into two:
+ *   - HAVE_<FUNCTION>:  The configure check for compile time availability
+ *   - HAVE_<FUNCTION>_RUNTIME: Runtime check for availability
+ *
+ * The latter is always true when not on macOS, or when using a compiler
+ * that does not support __has_builtin (older versions of Xcode).
+ *
+ * Due to compiler restrictions there is one valid use of HAVE_<FUNCTION>_RUNTIME:
+ *    if (HAVE_<FUNCTION>_RUNTIME) { ... }
+ *
+ * In mixing the test with other tests or using negations will result in compile
+ * errors.
+ */
+#if defined(__APPLE__)
+
+#if defined(__has_builtin) && __has_builtin(__builtin_available)
+#  define HAVE_FSTATAT_RUNTIME __builtin_available(macOS 10.10, iOS 8.0, *)
+#  define HAVE_FACCESSAT_RUNTIME __builtin_available(macOS 10.10, iOS 8.0, *)
+#  define HAVE_FCHMODAT_RUNTIME __builtin_available(macOS 10.10, iOS 8.0, *)
+#  define HAVE_FCHOWNAT_RUNTIME __builtin_available(macOS 10.10, iOS 8.0, *)
+#  define HAVE_LINKAT_RUNTIME __builtin_available(macOS 10.10, iOS 8.0, *)
+#  define HAVE_FDOPENDIR_RUNTIME __builtin_available(macOS 10.10, iOS 8.0, *)
+#  define HAVE_MKDIRAT_RUNTIME __builtin_available(macOS 10.10, iOS 8.0, *)
+#  define HAVE_RENAMEAT_RUNTIME __builtin_available(macOS 10.10, iOS 8.0, *)
+#  define HAVE_UNLINKAT_RUNTIME __builtin_available(macOS 10.10, iOS 8.0, *)
+#  define HAVE_OPENAT_RUNTIME __builtin_available(macOS 10.10, iOS 8.0, *)
+#  define HAVE_READLINKAT_RUNTIME __builtin_available(macOS 10.10, iOS 8.0, *)
+#  define HAVE_SYMLINKAT_RUNTIME __builtin_available(macOS 10.10, iOS 8.0, *)
+#  define HAVE_FUTIMENS_RUNTIME __builtin_available(macOS 10.13, iOS 11.0, tvOS 11.0, watchOS 4.0, *)
+#  define HAVE_UTIMENSAT_RUNTIME __builtin_available(macOS 10.13, iOS 11.0, tvOS 11.0, watchOS 4.0, *)
+#  define HAVE_PWRITEV_RUNTIME __builtin_available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *)
+
+#  define HAVE_POSIX_SPAWN_SETSID_RUNTIME __builtin_available(macOS 10.15, *)
+
+#else /* Xcode 8 or earlier */
+
+   /* __builtin_available is not present in these compilers, but
+    * some of the symbols might be weak linked (10.10 SDK or later
+    * deploying on 10.9.
+    *
+    * Fall back to the older style of availability checking for
+    * symbols introduced in macOS 10.10.
+    */
+
+#  ifdef HAVE_FSTATAT
+#    define HAVE_FSTATAT_RUNTIME (fstatat != NULL)
+#  endif
+
+#  ifdef HAVE_FACCESSAT
+#    define HAVE_FACCESSAT_RUNTIME (faccessat != NULL)
+#  endif
+
+#  ifdef HAVE_FCHMODAT
+#    define HAVE_FCHMODAT_RUNTIME (fchmodat != NULL)
+#  endif
+
+#  ifdef HAVE_FCHOWNAT
+#    define HAVE_FCHOWNAT_RUNTIME (fchownat != NULL)
+#  endif
+
+#  ifdef HAVE_LINKAT
+#    define HAVE_LINKAT_RUNTIME (linkat != NULL)
+#  endif
+
+#  ifdef HAVE_FDOPENDIR
+#    define HAVE_FDOPENDIR_RUNTIME (fdopendir != NULL)
+#  endif
+
+#  ifdef HAVE_MKDIRAT
+#    define HAVE_MKDIRAT_RUNTIME (mkdirat != NULL)
+#  endif
+
+#  ifdef HAVE_RENAMEAT
+#    define HAVE_RENAMEAT_RUNTIME (renameat != NULL)
+#  endif
+
+#  ifdef HAVE_UNLINKAT
+#    define HAVE_UNLINKAT_RUNTIME (unlinkat != NULL)
+#  endif
+
+#  ifdef HAVE_OPENAT
+#    define HAVE_OPENAT_RUNTIME (openat != NULL)
+#  endif
+
+#  ifdef HAVE_READLINKAT
+#    define HAVE_READLINKAT_RUNTIME (readlinkat != NULL)
+#  endif
+
+#  ifdef HAVE_SYMLINKAT
+#    define HAVE_SYMLINKAT_RUNTIME (symlinkat != NULL)
+#  endif
+
+#endif
+
+#ifdef HAVE_FUTIMESAT
+/* Some of the logic for weak linking depends on this assertion */
+# error "HAVE_FUTIMESAT unexpectedly defined"
+#endif
+
+#else
+#  define HAVE_FSTATAT_RUNTIME 1
+#  define HAVE_FACCESSAT_RUNTIME 1
+#  define HAVE_FCHMODAT_RUNTIME 1
+#  define HAVE_FCHOWNAT_RUNTIME 1
+#  define HAVE_LINKAT_RUNTIME 1
+#  define HAVE_FDOPENDIR_RUNTIME 1
+#  define HAVE_MKDIRAT_RUNTIME 1
+#  define HAVE_RENAMEAT_RUNTIME 1
+#  define HAVE_UNLINKAT_RUNTIME 1
+#  define HAVE_OPENAT_RUNTIME 1
+#  define HAVE_READLINKAT_RUNTIME 1
+#  define HAVE_SYMLINKAT_RUNTIME 1
+#  define HAVE_FUTIMENS_RUNTIME 1
+#  define HAVE_UTIMENSAT_RUNTIME 1
+#  define HAVE_PWRITEV_RUNTIME 1
+#endif
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -281,6 +392,14 @@ extern int lstat(const char *, struct stat *);
 #define popen   _popen
 #define pclose  _pclose
 #endif /* _MSC_VER */
+
+#if !defined(SEP)
+	#ifdef MS_WINDOWS
+		#define SEP "\\"
+	#else
+		#define SEP "/"
+	#endif
+#endif
 
 #if defined(PYCC_VACPP) && defined(PYOS_OS2)
 #include <io.h>
@@ -533,8 +652,48 @@ _PyInt_FromDev(PY_LONG_LONG v)
 #  define _PyInt_FromDev PyInt_FromLong
 #endif
 
+#if defined _MSC_VER && _MSC_VER >= 1700
+void
+_PyInvalidParameterHandler(const wchar_t* expression, const wchar_t* function, const wchar_t* file, unsigned int line, uintptr_t pReserved)
+{
+}
 
-#if defined _MSC_VER && _MSC_VER >= 1400
+int
+_PyVerify_fd(int fd)
+{
+	HANDLE hFd;
+	_invalid_parameter_handler oldHandler;
+
+	oldHandler = _set_invalid_parameter_handler(_PyInvalidParameterHandler);
+
+	hFd = _get_osfhandle(fd);
+	if (hFd == INVALID_HANDLE_VALUE)
+		goto fail;
+	if ((fd < 0) || _isatty(fd))
+		goto fail;
+
+	// FIXME: ensure that file descriptor is open too
+	_set_invalid_parameter_handler(oldHandler);
+	return 1;
+
+fail:
+	_set_invalid_parameter_handler(oldHandler);
+	return 0;
+}
+
+static int
+_PyVerify_fd_dup2(int fd1, int fd2)
+{
+	_invalid_parameter_handler oldHandler;
+
+	if (!_PyVerify_fd(fd1))
+		return 0;
+	if (fd2 < 0)
+		return 0;
+	return 1;
+}
+
+#elif defined _MSC_VER && _MSC_VER >= 1400
 /* Microsoft CRT in VS2005 and higher will verify that a filehandle is
  * valid and raise an assertion if it isn't.
  * Normally, an invalid fd is likely to be a C program error and therefore
@@ -728,6 +887,13 @@ posix_error_with_allocated_filename(char* name)
     PyObject *rc = PyErr_SetFromErrnoWithFilename(PyExc_OSError, name);
     PyMem_Free(name);
     return rc;
+}
+
+static PyObject *
+posix_error_with_string(char* msg)
+{
+    PyErr_SetString(PyExc_OSError, msg);
+    return NULL;
 }
 
 #ifdef MS_WINDOWS
@@ -5377,6 +5543,10 @@ win32_popen4(PyObject *self, PyObject  *args)
     return f;
 }
 
+#if !defined(SEP)
+#define SEP "\\"
+#endif
+
 static BOOL
 _PyPopenCreateProcess(char *cmdstring,
                       HANDLE hStdin,
@@ -8857,6 +9027,613 @@ posix_getresgid (PyObject *self, PyObject *noargs)
 }
 #endif
 
+/* Posix *at family of functions:
+    faccessat, fchmodat, fchownat, fstatat, futimesat,
+    linkat, mkdirat, mknodat, openat, readlinkat, renameat, symlinkat,
+    unlinkat, utimensat, mkfifoat */
+
+#ifdef HAVE_FACCESSAT
+PyDoc_STRVAR(posix_faccessat__doc__,
+"faccessat(dirfd, path, mode, flags=0) -> True if granted, False otherwise\n\n\
+Like access() but if path is relative, it is taken as relative to dirfd.\n\
+flags is optional and can be constructed by ORing together zero or more\n\
+of these values: AT_SYMLINK_NOFOLLOW, AT_EACCESS.\n\
+If path is relative and dirfd is the special value AT_FDCWD, then path\n\
+is interpreted relative to the current working directory.");
+
+static PyObject *
+posix_faccessat(PyObject *self, PyObject *args)
+{
+    PyObject *opath;
+    char *path;
+    int mode;
+    int res;
+    int dirfd, flags = 0;
+
+    if (HAVE_FACCESSAT_RUNTIME) {
+    } else {
+        return posix_error_with_string("faccessat() not available at runtime");
+    }
+
+    if (!PyArg_ParseTuple(args, "iO&i|i:faccessat",
+            &dirfd, PyUnicode_FSConverter, &opath, &mode, &flags))
+        return NULL;
+    path = PyBytes_AsString(opath);
+    Py_BEGIN_ALLOW_THREADS
+    res = faccessat(dirfd, path, mode, flags);
+    Py_END_ALLOW_THREADS
+    Py_DECREF(opath);
+    return PyBool_FromLong(res == 0);
+}
+#endif
+
+#ifdef HAVE_FCHMODAT
+PyDoc_STRVAR(posix_fchmodat__doc__,
+"fchmodat(dirfd, path, mode, flags=0)\n\n\
+Like chmod() but if path is relative, it is taken as relative to dirfd.\n\
+flags is optional and may be 0 or AT_SYMLINK_NOFOLLOW.\n\
+If path is relative and dirfd is the special value AT_FDCWD, then path\n\
+is interpreted relative to the current working directory.");
+
+static PyObject *
+posix_fchmodat(PyObject *self, PyObject *args)
+{
+    int dirfd, mode, res;
+    int flags = 0;
+    PyObject *opath;
+    char *path;
+
+    if (HAVE_FCHMODAT_RUNTIME) {
+    } else {
+        return posix_error_with_string("fchmodat() not available at runtime");
+    }
+
+    if (!PyArg_ParseTuple(args, "iO&i|i:fchmodat",
+            &dirfd, PyUnicode_FSConverter, &opath, &mode, &flags))
+        return NULL;
+
+    path = PyBytes_AsString(opath);
+
+    Py_BEGIN_ALLOW_THREADS
+    res = fchmodat(dirfd, path, mode, flags);
+    Py_END_ALLOW_THREADS
+    Py_DECREF(opath);
+    if (res < 0)
+        return posix_error();
+    Py_RETURN_NONE;
+}
+#endif /* HAVE_FCHMODAT */
+
+#ifdef HAVE_FCHOWNAT
+PyDoc_STRVAR(posix_fchownat__doc__,
+"fchownat(dirfd, path, uid, gid, flags=0)\n\n\
+Like chown() but if path is relative, it is taken as relative to dirfd.\n\
+flags is optional and may be 0 or AT_SYMLINK_NOFOLLOW.\n\
+If path is relative and dirfd is the special value AT_FDCWD, then path\n\
+is interpreted relative to the current working directory.");
+
+static PyObject *
+posix_fchownat(PyObject *self, PyObject *args)
+{
+    PyObject *opath;
+    int dirfd, res;
+    long uid, gid;
+    int flags = 0;
+    char *path;
+    
+    if (HAVE_FCHOWNAT_RUNTIME) {
+    } else {
+        return posix_error_with_string("fchownat() not available at runtime");
+    }
+
+    if (!PyArg_ParseTuple(args, "iO&ll|i:fchownat",
+            &dirfd, PyUnicode_FSConverter, &opath, &uid, &gid, &flags))
+        return NULL;
+
+    path = PyBytes_AsString(opath);
+
+    Py_BEGIN_ALLOW_THREADS
+    res = fchownat(dirfd, path, (uid_t) uid, (gid_t) gid, flags);
+    Py_END_ALLOW_THREADS
+    Py_DECREF(opath);
+    if (res < 0)
+        return posix_error();
+    Py_RETURN_NONE;
+}
+#endif /* HAVE_FCHOWNAT */
+
+#ifdef HAVE_FSTATAT
+PyDoc_STRVAR(posix_fstatat__doc__,
+"fstatat(dirfd, path, flags=0) -> stat result\n\n\
+Like stat() but if path is relative, it is taken as relative to dirfd.\n\
+flags is optional and may be 0 or AT_SYMLINK_NOFOLLOW.\n\
+If path is relative and dirfd is the special value AT_FDCWD, then path\n\
+is interpreted relative to the current working directory.");
+
+static PyObject *
+posix_fstatat(PyObject *self, PyObject *args)
+{
+    PyObject *opath;
+    char *path;
+    STRUCT_STAT st;
+    int dirfd, res, flags = 0;
+
+    if (HAVE_FSTATAT_RUNTIME) {
+    } else {
+        return posix_error_with_string("fstatat() not available at runtime");
+    }
+
+    if (!PyArg_ParseTuple(args, "iO&|i:fstatat",
+            &dirfd, PyUnicode_FSConverter, &opath, &flags))
+        return NULL;
+    path = PyBytes_AsString(opath);
+
+    Py_BEGIN_ALLOW_THREADS
+    res = fstatat(dirfd, path, &st, flags);
+    Py_END_ALLOW_THREADS
+    Py_DECREF(opath);
+    if (res != 0)
+        return posix_error();
+
+    return _pystat_fromstructstat(&st);
+}
+#endif
+
+#ifdef HAVE_FUTIMESAT
+PyDoc_STRVAR(posix_futimesat__doc__,
+"futimesat(dirfd, path, (atime, mtime))\n\
+futimesat(dirfd, path, None)\n\n\
+Like utime() but if path is relative, it is taken as relative to dirfd.\n\
+If path is relative and dirfd is the special value AT_FDCWD, then path\n\
+is interpreted relative to the current working directory.");
+
+static PyObject *
+posix_futimesat(PyObject *self, PyObject *args)
+{
+    PyObject *opath;
+    char *path;
+    int res, dirfd;
+    PyObject* arg;
+
+    struct timeval buf[2];
+
+    if (!PyArg_ParseTuple(args, "iO&O:futimesat",
+            &dirfd, PyUnicode_FSConverter, &opath, &arg))
+        return NULL;
+    path = PyBytes_AsString(opath);
+    if (arg == Py_None) {
+        /* optional time values not given */
+        Py_BEGIN_ALLOW_THREADS
+        res = futimesat(dirfd, path, NULL);
+        Py_END_ALLOW_THREADS
+    }
+    else if (!PyTuple_Check(arg) || PyTuple_Size(arg) != 2) {
+        PyErr_SetString(PyExc_TypeError,
+                "futimesat() arg 3 must be a tuple (atime, mtime)");
+        Py_DECREF(opath);
+        return NULL;
+    }
+    else {
+        if (extract_time(PyTuple_GET_ITEM(arg, 0),
+				&(buf[0].tv_sec), &(buf[0].tv_usec)) == -1) {
+            Py_DECREF(opath);
+            return NULL;
+        }
+        if (extract_time(PyTuple_GET_ITEM(arg, 1),
+				&(buf[1].tv_sec), &(buf[1].tv_usec)) == -1) {
+            Py_DECREF(opath);
+            return NULL;
+        }
+        Py_BEGIN_ALLOW_THREADS
+        res = futimesat(dirfd, path, buf);
+        Py_END_ALLOW_THREADS
+    }
+    Py_DECREF(opath);
+    if (res < 0) {
+        return posix_error();
+    }
+    Py_RETURN_NONE;
+}
+#endif
+
+#ifdef HAVE_LINKAT
+PyDoc_STRVAR(posix_linkat__doc__,
+"linkat(srcfd, srcpath, dstfd, dstpath, flags=0)\n\n\
+Like link() but if srcpath is relative, it is taken as relative to srcfd\n\
+and if dstpath is relative, it is taken as relative to dstfd.\n\
+flags is optional and may be 0 or AT_SYMLINK_FOLLOW.\n\
+If srcpath is relative and srcfd is the special value AT_FDCWD, then\n\
+srcpath is interpreted relative to the current working directory. This\n\
+also applies for dstpath.");
+
+static PyObject *
+posix_linkat(PyObject *self, PyObject *args)
+{
+    PyObject *osrc, *odst;
+    char *src, *dst;
+    int res, srcfd, dstfd;
+    int flags = 0;
+
+    if (HAVE_LINKAT_RUNTIME) {
+    } else {
+        return posix_error_with_string("flinkat() not available at runtime");
+    }
+
+    if (!PyArg_ParseTuple(args, "iO&iO&|i:linkat",
+            &srcfd, PyUnicode_FSConverter, &osrc, &dstfd, PyUnicode_FSConverter, &odst, &flags))
+        return NULL;
+    src = PyBytes_AsString(osrc);
+    dst = PyBytes_AsString(odst);
+    Py_BEGIN_ALLOW_THREADS
+    res = linkat(srcfd, src, dstfd, dst, flags);
+    Py_END_ALLOW_THREADS
+    Py_DECREF(osrc);
+    Py_DECREF(odst);
+    if (res < 0)
+        return posix_error();
+    Py_RETURN_NONE;
+}
+#endif /* HAVE_LINKAT */
+
+#ifdef HAVE_MKDIRAT
+PyDoc_STRVAR(posix_mkdirat__doc__,
+"mkdirat(dirfd, path, mode=0o777)\n\n\
+Like mkdir() but if path is relative, it is taken as relative to dirfd.\n\
+If path is relative and dirfd is the special value AT_FDCWD, then path\n\
+is interpreted relative to the current working directory.");
+
+static PyObject *
+posix_mkdirat(PyObject *self, PyObject *args)
+{
+    int res, dirfd;
+    PyObject *opath;
+    char *path;
+    int mode = 0777;
+
+    if (HAVE_MKDIRAT_RUNTIME) {
+    } else {
+        return posix_error_with_string("mkdirat() not available at runtime");
+    }
+
+    if (!PyArg_ParseTuple(args, "iO&|i:mkdirat",
+            &dirfd, PyUnicode_FSConverter, &opath, &mode))
+        return NULL;
+    path = PyBytes_AsString(opath);
+    Py_BEGIN_ALLOW_THREADS
+    res = mkdirat(dirfd, path, mode);
+    Py_END_ALLOW_THREADS
+    Py_DECREF(opath);
+    if (res < 0)
+        return posix_error();
+    Py_RETURN_NONE;
+}
+#endif
+
+#if defined(HAVE_MKNODAT) && defined(HAVE_MAKEDEV)
+PyDoc_STRVAR(posix_mknodat__doc__,
+"mknodat(dirfd, path, mode=0o600, device=0)\n\n\
+Like mknod() but if path is relative, it is taken as relative to dirfd.\n\
+If path is relative and dirfd is the special value AT_FDCWD, then path\n\
+is interpreted relative to the current working directory.");
+
+static PyObject *
+posix_mknodat(PyObject *self, PyObject *args)
+{
+    PyObject *opath;
+    char *filename;
+    int mode = 0600;
+    int device = 0;
+    int res, dirfd;
+    if (!PyArg_ParseTuple(args, "iO&|ii:mknodat", &dirfd,
+            PyUnicode_FSConverter, &opath, &mode, &device))
+        return NULL;
+    filename = PyBytes_AS_STRING(opath);
+    Py_BEGIN_ALLOW_THREADS
+    res = mknodat(dirfd, filename, mode, device);
+    Py_END_ALLOW_THREADS
+    Py_DECREF(opath);
+    if (res < 0)
+        return posix_error();
+    Py_RETURN_NONE;
+}
+#endif
+
+#ifdef HAVE_OPENAT
+PyDoc_STRVAR(posix_openat__doc__,
+"openat(dirfd, path, flag, mode=0o777) -> fd\n\n\
+Like open() but if path is relative, it is taken as relative to dirfd.\n\
+If path is relative and dirfd is the special value AT_FDCWD, then path\n\
+is interpreted relative to the current working directory.");
+
+static PyObject *
+posix_openat(PyObject *self, PyObject *args)
+{
+    PyObject *ofile;
+    char *file;
+    int flag, dirfd, fd;
+    int mode = 0777;
+
+    if (HAVE_OPENAT_RUNTIME) {
+    } else {
+        return posix_error_with_string("openat() not available at runtime");
+    }
+
+    if (!PyArg_ParseTuple(args, "iO&i|i:openat",
+            &dirfd, PyUnicode_FSConverter, &ofile,
+            &flag, &mode))
+        return NULL;
+    file = PyBytes_AsString(ofile);
+    Py_BEGIN_ALLOW_THREADS
+    fd = openat(dirfd, file, flag, mode);
+    Py_END_ALLOW_THREADS
+    Py_DECREF(ofile);
+    if (fd < 0)
+        return posix_error();
+    return PyLong_FromLong((long)fd);
+}
+#endif
+
+#ifdef HAVE_READLINKAT
+PyDoc_STRVAR(posix_readlinkat__doc__,
+"readlinkat(dirfd, path) -> path\n\n\
+Like readlink() but if path is relative, it is taken as relative to dirfd.\n\
+If path is relative and dirfd is the special value AT_FDCWD, then path\n\
+is interpreted relative to the current working directory.");
+
+static PyObject *
+posix_readlinkat(PyObject *self, PyObject *args)
+{
+    PyObject *v, *opath;
+    char buf[MAXPATHLEN];
+    char *path;
+    int n, dirfd;
+    int arg_is_unicode = 0;
+
+    if (HAVE_READLINKAT_RUNTIME) {
+    } else {
+        return posix_error_with_string("readlinkat() not available at runtime");
+    }
+
+    if (!PyArg_ParseTuple(args, "iO&:readlinkat",
+            &dirfd, PyUnicode_FSConverter, &opath))
+        return NULL;
+    path = PyBytes_AsString(opath);
+    v = PySequence_GetItem(args, 1);
+    if (v == NULL) {
+        Py_DECREF(opath);
+        return NULL;
+    }
+
+    if (PyUnicode_Check(v)) {
+        arg_is_unicode = 1;
+    }
+    Py_DECREF(v);
+
+    Py_BEGIN_ALLOW_THREADS
+    n = readlinkat(dirfd, path, buf, (int) sizeof buf);
+    Py_END_ALLOW_THREADS
+    Py_DECREF(opath);
+    if (n < 0)
+        return posix_error();
+
+    if (arg_is_unicode)
+        return PyUnicode_Decode(buf, n, Py_FileSystemDefaultEncoding, NULL);
+    else
+        return PyBytes_FromStringAndSize(buf, n);
+}
+#endif /* HAVE_READLINKAT */
+
+#ifdef HAVE_RENAMEAT
+PyDoc_STRVAR(posix_renameat__doc__,
+"renameat(olddirfd, oldpath, newdirfd, newpath)\n\n\
+Like rename() but if oldpath is relative, it is taken as relative to\n\
+olddirfd and if newpath is relative, it is taken as relative to newdirfd.\n\
+If oldpath is relative and olddirfd is the special value AT_FDCWD, then\n\
+oldpath is interpreted relative to the current working directory. This\n\
+also applies for newpath.");
+
+static PyObject *
+posix_renameat(PyObject *self, PyObject *args)
+{
+    int res;
+    PyObject *opathold, *opathnew;
+    char *opath, *npath;
+    int oldfd, newfd;
+
+    if (HAVE_RENAMEAT_RUNTIME) {
+    } else {
+        return posix_error_with_string("renameat() not available at runtime");
+    }
+
+    if (!PyArg_ParseTuple(args, "iO&iO&:renameat",
+            &oldfd, PyUnicode_FSConverter, &opathold, &newfd, PyUnicode_FSConverter, &opathnew))
+        return NULL;
+    opath = PyBytes_AsString(opathold);
+    npath = PyBytes_AsString(opathnew);
+    Py_BEGIN_ALLOW_THREADS
+    res = renameat(oldfd, opath, newfd, npath);
+    Py_END_ALLOW_THREADS
+    Py_DECREF(opathold);
+    Py_DECREF(opathnew);
+    if (res < 0)
+        return posix_error();
+    Py_RETURN_NONE;
+}
+#endif
+
+#if HAVE_SYMLINKAT
+PyDoc_STRVAR(posix_symlinkat__doc__,
+"symlinkat(src, dstfd, dst)\n\n\
+Like symlink() but if dst is relative, it is taken as relative to dstfd.\n\
+If dst is relative and dstfd is the special value AT_FDCWD, then dst\n\
+is interpreted relative to the current working directory.");
+
+static PyObject *
+posix_symlinkat(PyObject *self, PyObject *args)
+{
+    int res, dstfd;
+    PyObject *osrc, *odst;
+    char *src, *dst;
+
+    if (HAVE_SYMLINKAT_RUNTIME) {
+    } else {
+        return posix_error_with_string("symlinkat() not available at runtime");
+    }
+
+    if (!PyArg_ParseTuple(args, "O&iO&:symlinkat",
+            PyUnicode_FSConverter, &osrc, &dstfd, PyUnicode_FSConverter, &odst))
+        return NULL;
+    src = PyBytes_AsString(osrc);
+    dst = PyBytes_AsString(odst);
+    Py_BEGIN_ALLOW_THREADS
+    res = symlinkat(src, dstfd, dst);
+    Py_END_ALLOW_THREADS
+    Py_DECREF(osrc);
+    Py_DECREF(odst);
+    if (res < 0)
+        return posix_error();
+    Py_RETURN_NONE;
+}
+#endif /* HAVE_SYMLINKAT */
+
+#ifdef HAVE_UNLINKAT
+PyDoc_STRVAR(posix_unlinkat__doc__,
+"unlinkat(dirfd, path, flags=0)\n\n\
+Like unlink() but if path is relative, it is taken as relative to dirfd.\n\
+flags is optional and may be 0 or AT_REMOVEDIR. If AT_REMOVEDIR is\n\
+specified, unlinkat() behaves like rmdir().\n\
+If path is relative and dirfd is the special value AT_FDCWD, then path\n\
+is interpreted relative to the current working directory.");
+
+static PyObject *
+posix_unlinkat(PyObject *self, PyObject *args)
+{
+    int dirfd, res, flags = 0;
+    PyObject *opath;
+    char *path;
+
+    if (HAVE_UNLINKAT_RUNTIME) {
+    } else {
+        return posix_error_with_string("unlinkat() not available at runtime");
+    }
+
+    if (!PyArg_ParseTuple(args, "iO&|i:unlinkat",
+            &dirfd, PyUnicode_FSConverter, &opath, &flags))
+        return NULL;
+    path = PyBytes_AsString(opath);
+    Py_BEGIN_ALLOW_THREADS
+    res = unlinkat(dirfd, path, flags);
+    Py_END_ALLOW_THREADS
+    Py_DECREF(opath);
+    if (res < 0)
+        return posix_error();
+    Py_RETURN_NONE;
+}
+#endif
+
+#ifdef HAVE_UTIMENSAT
+PyDoc_STRVAR(posix_utimensat__doc__,
+"utimensat(dirfd, path, (atime_sec, atime_nsec),\n\
+    (mtime_sec, mtime_nsec), flags)\n\
+utimensat(dirfd, path, None, None, flags)\n\n\
+Updates the timestamps of a file with nanosecond precision. If path is\n\
+relative, it is taken as relative to dirfd.\n\
+The second form sets atime and mtime to the current time.\n\
+flags is optional and may be 0 or AT_SYMLINK_NOFOLLOW.\n\
+If path is relative and dirfd is the special value AT_FDCWD, then path\n\
+is interpreted relative to the current working directory.\n\
+If *_nsec is specified as UTIME_NOW, the timestamp is updated to the\n\
+current time.\n\
+If *_nsec is specified as UTIME_OMIT, the timestamp is not updated.");
+
+static PyObject *
+posix_utimensat(PyObject *self, PyObject *args)
+{
+    PyObject *opath;
+    char *path;
+    int res, dirfd, flags = 0;
+    PyObject *atime, *mtime;
+
+    if (HAVE_UTIMENSAT_RUNTIME) {
+    } else {
+        return posix_error_with_string("utimensat() not available at runtime");
+    }
+
+    struct timespec buf[2];
+
+    if (!PyArg_ParseTuple(args, "iO&OO|i:utimensat",
+            &dirfd, PyUnicode_FSConverter, &opath, &atime, &mtime, &flags))
+        return NULL;
+    path = PyBytes_AsString(opath);
+    if (atime == Py_None && mtime == Py_None) {
+        /* optional time values not given */
+        Py_BEGIN_ALLOW_THREADS
+        res = utimensat(dirfd, path, NULL, flags);
+        Py_END_ALLOW_THREADS
+    }
+    else if (!PyTuple_Check(atime) || PyTuple_Size(atime) != 2) {
+        PyErr_SetString(PyExc_TypeError,
+            "utimensat() arg 3 must be a tuple (atime_sec, atime_nsec)");
+        Py_DECREF(opath);
+        return NULL;
+    }
+    else if (!PyTuple_Check(mtime) || PyTuple_Size(mtime) != 2) {
+        PyErr_SetString(PyExc_TypeError,
+            "utimensat() arg 4 must be a tuple (mtime_sec, mtime_nsec)");
+        Py_DECREF(opath);
+        return NULL;
+    }
+    else {
+        if (!PyArg_ParseTuple(atime, "ll:utimensat",
+                &(buf[0].tv_sec), &(buf[0].tv_nsec))) {
+            Py_DECREF(opath);
+            return NULL;
+        }
+        if (!PyArg_ParseTuple(mtime, "ll:utimensat",
+                &(buf[1].tv_sec), &(buf[1].tv_nsec))) {
+            Py_DECREF(opath);
+            return NULL;
+        }
+        Py_BEGIN_ALLOW_THREADS
+        res = utimensat(dirfd, path, buf, flags);
+        Py_END_ALLOW_THREADS
+    }
+    Py_DECREF(opath);
+    if (res < 0) {
+        return posix_error();
+    }
+    Py_RETURN_NONE;
+}
+#endif
+
+#ifdef HAVE_MKFIFOAT
+PyDoc_STRVAR(posix_mkfifoat__doc__,
+"mkfifoat(dirfd, path, mode=0o666)\n\n\
+Like mkfifo() but if path is relative, it is taken as relative to dirfd.\n\
+If path is relative and dirfd is the special value AT_FDCWD, then path\n\
+is interpreted relative to the current working directory.");
+
+static PyObject *
+posix_mkfifoat(PyObject *self, PyObject *args)
+{
+    PyObject *opath;
+    char *filename;
+    int mode = 0666;
+    int res, dirfd;
+    if (!PyArg_ParseTuple(args, "iO&|i:mkfifoat",
+            &dirfd, PyUnicode_FSConverter, &opath, &mode))
+        return NULL;
+    filename = PyBytes_AS_STRING(opath);
+    Py_BEGIN_ALLOW_THREADS
+    res = mkfifoat(dirfd, filename, mode);
+    Py_END_ALLOW_THREADS
+    Py_DECREF(opath);
+    if (res < 0)
+        return posix_error();
+    Py_RETURN_NONE;
+}
+#endif
+
 static PyMethodDef posix_methods[] = {
     {"access",          posix_access, METH_VARARGS, posix_access__doc__},
 #ifdef HAVE_TTYNAME
@@ -9178,6 +9955,52 @@ static PyMethodDef posix_methods[] = {
 #ifdef HAVE_GETRESGID
     {"getresgid",       posix_getresgid, METH_NOARGS, posix_getresgid__doc__},
 #endif
+/* posix *at family of functions */
+#ifdef HAVE_FACCESSAT
+    {"faccessat",       posix_faccessat, METH_VARARGS, posix_faccessat__doc__},
+#endif
+#ifdef HAVE_FCHMODAT
+    {"fchmodat",        posix_fchmodat, METH_VARARGS, posix_fchmodat__doc__},
+#endif /* HAVE_FCHMODAT */
+#ifdef HAVE_FCHOWNAT
+    {"fchownat",        posix_fchownat, METH_VARARGS, posix_fchownat__doc__},
+#endif /* HAVE_FCHOWNAT */
+#ifdef HAVE_FSTATAT
+    {"fstatat",         posix_fstatat, METH_VARARGS, posix_fstatat__doc__},
+#endif
+#ifdef HAVE_FUTIMESAT
+    {"futimesat",       posix_futimesat, METH_VARARGS, posix_futimesat__doc__},
+#endif
+#ifdef HAVE_LINKAT
+    {"linkat",          posix_linkat, METH_VARARGS, posix_linkat__doc__},
+#endif /* HAVE_LINKAT */
+#ifdef HAVE_MKDIRAT
+    {"mkdirat",         posix_mkdirat, METH_VARARGS, posix_mkdirat__doc__},
+#endif
+#if defined(HAVE_MKNODAT) && defined(HAVE_MAKEDEV)
+    {"mknodat",         posix_mknodat, METH_VARARGS, posix_mknodat__doc__},
+#endif
+#ifdef HAVE_OPENAT
+    {"openat",      posix_openat, METH_VARARGS, posix_openat__doc__},
+#endif
+#ifdef HAVE_READLINKAT
+    {"readlinkat",      posix_readlinkat, METH_VARARGS, posix_readlinkat__doc__},
+#endif /* HAVE_READLINKAT */
+#ifdef HAVE_RENAMEAT
+    {"renameat",        posix_renameat, METH_VARARGS, posix_renameat__doc__},
+#endif
+#if HAVE_SYMLINKAT
+    {"symlinkat",       posix_symlinkat, METH_VARARGS, posix_symlinkat__doc__},
+#endif /* HAVE_SYMLINKAT */
+#ifdef HAVE_UNLINKAT
+    {"unlinkat",        posix_unlinkat, METH_VARARGS, posix_unlinkat__doc__},
+#endif
+#ifdef HAVE_UTIMENSAT
+    {"utimensat",       posix_utimensat, METH_VARARGS, posix_utimensat__doc__},
+#endif
+#ifdef HAVE_MKFIFOAT
+    {"mkfifoat",        posix_mkfifoat, METH_VARARGS, posix_mkfifoat__doc__},
+#endif
     {"urandom",         posix_urandom,   METH_VARARGS, posix_urandom__doc__},
     {NULL,              NULL}            /* Sentinel */
 };
@@ -9320,11 +10143,13 @@ all_ins(PyObject *d)
 #ifdef O_LARGEFILE
     if (ins(d, "O_LARGEFILE", (long)O_LARGEFILE)) return -1;
 #endif
+#ifndef __GNU__
 #ifdef O_SHLOCK
     if (ins(d, "O_SHLOCK", (long)O_SHLOCK)) return -1;
 #endif
 #ifdef O_EXLOCK
     if (ins(d, "O_EXLOCK", (long)O_EXLOCK)) return -1;
+#endif
 #endif
 
 /* MS Windows */
@@ -9371,6 +10196,28 @@ all_ins(PyObject *d)
 #ifdef O_NOATIME
     /* Do not update the access time. */
     if (ins(d, "O_NOATIME", (long)O_NOATIME)) return -1;
+#endif
+/* posix - constants for *at functions */
+#ifdef AT_SYMLINK_NOFOLLOW
+        if (ins(d, "AT_SYMLINK_NOFOLLOW", (long)AT_SYMLINK_NOFOLLOW)) return -1;
+#endif
+#ifdef AT_EACCESS
+        if (ins(d, "AT_EACCESS", (long)AT_EACCESS)) return -1;
+#endif
+#ifdef AT_FDCWD
+        if (ins(d, "AT_FDCWD", (long)AT_FDCWD)) return -1;
+#endif
+#ifdef AT_REMOVEDIR
+        if (ins(d, "AT_REMOVEDIR", (long)AT_REMOVEDIR)) return -1;
+#endif
+#ifdef AT_SYMLINK_FOLLOW
+        if (ins(d, "AT_SYMLINK_FOLLOW", (long)AT_SYMLINK_FOLLOW)) return -1;
+#endif
+#ifdef UTIME_NOW
+        if (ins(d, "UTIME_NOW", (long)UTIME_NOW)) return -1;
+#endif
+#ifdef UTIME_OMIT
+        if (ins(d, "UTIME_OMIT", (long)UTIME_OMIT)) return -1;
 #endif
 
     /* These come from sysexits.h */
@@ -9425,6 +10272,43 @@ all_ins(PyObject *d)
 #ifdef EX_NOTFOUND
     if (ins(d, "EX_NOTFOUND", (long)EX_NOTFOUND)) return -1;
 #endif /* EX_NOTFOUND */
+
+	/* These came from statvfs.h */
+#ifdef ST_RDONLY
+	if (ins(d, "ST_RDONLY", (long)ST_RDONLY)) return -1;
+#endif /* ST_RDONLY */
+#ifdef ST_NOSUID
+	if (ins(d, "ST_NOSUID", (long)ST_NOSUID)) return -1;
+#endif /* ST_NOSUID */
+
+	/* GNU extensions */
+#ifdef ST_NODEV
+	if (ins(d, "ST_NODEV", (long)ST_NODEV)) return -1;
+#endif /* ST_NODEV */
+#ifdef ST_NOEXEC
+	if (ins(d, "ST_NOEXEC", (long)ST_NOEXEC)) return -1;
+#endif /* ST_NOEXEC */
+#ifdef ST_SYNCHRONOUS
+	if (ins(d, "ST_SYNCHRONOUS", (long)ST_SYNCHRONOUS)) return -1;
+#endif /* ST_SYNCHRONOUS */
+#ifdef ST_MANDLOCK
+	if (ins(d, "ST_MANDLOCK", (long)ST_MANDLOCK)) return -1;
+#endif /* ST_MANDLOCK */
+#ifdef ST_WRITE
+	if (ins(d, "ST_WRITE", (long)ST_WRITE)) return -1;
+#endif /* ST_WRITE */
+#ifdef ST_APPEND
+	if (ins(d, "ST_APPEND", (long)ST_APPEND)) return -1;
+#endif /* ST_APPEND */
+#ifdef ST_NOATIME
+	if (ins(d, "ST_NOATIME", (long)ST_NOATIME)) return -1;
+#endif /* ST_NOATIME */
+#ifdef ST_NODIRATIME
+	if (ins(d, "ST_NODIRATIME", (long)ST_NODIRATIME)) return -1;
+#endif /* ST_NODIRATIME */
+#ifdef ST_RELATIME
+	if (ins(d, "ST_RELATIME", (long)ST_RELATIME)) return -1;
+#endif /* ST_RELATIME */
 
 #ifdef HAVE_SPAWNV
 #if defined(PYOS_OS2) && defined(PYCC_GCC)
@@ -9536,45 +10420,6 @@ INITFUNC(void)
     PyModule_AddObject(m, "statvfs_result",
                        (PyObject*) &StatVFSResultType);
     initialized = 1;
-
-#ifdef __APPLE__
-    /*
-     * Step 2 of weak-linking support on Mac OS X.
-     *
-     * The code below removes functions that are not available on the
-     * currently active platform.
-     *
-     * This block allow one to use a python binary that was build on
-     * OSX 10.4 on OSX 10.3, without loosing access to new APIs on
-     * OSX 10.4.
-     */
-#ifdef HAVE_FSTATVFS
-    if (fstatvfs == NULL) {
-        if (PyObject_DelAttrString(m, "fstatvfs") == -1) {
-            return;
-        }
-    }
-#endif /* HAVE_FSTATVFS */
-
-#ifdef HAVE_STATVFS
-    if (statvfs == NULL) {
-        if (PyObject_DelAttrString(m, "statvfs") == -1) {
-            return;
-        }
-    }
-#endif /* HAVE_STATVFS */
-
-# ifdef HAVE_LCHOWN
-    if (lchown == NULL) {
-        if (PyObject_DelAttrString(m, "lchown") == -1) {
-            return;
-        }
-    }
-#endif /* HAVE_LCHOWN */
-
-
-#endif /* __APPLE__ */
-
 }
 
 #ifdef __cplusplus

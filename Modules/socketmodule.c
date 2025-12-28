@@ -97,7 +97,7 @@ Local naming conventions:
 
 #include "Python.h"
 #include "structmember.h"
-#include "timefuncs.h"
+#include "pytime.h"
 
 #ifndef INVALID_SOCKET /* MS defines this */
 #define INVALID_SOCKET (-1)
@@ -4948,8 +4948,10 @@ init_socket(void)
 #ifdef  SO_OOBINLINE
     PyModule_AddIntConstant(m, "SO_OOBINLINE", SO_OOBINLINE);
 #endif
+#ifndef __GNU__
 #ifdef  SO_REUSEPORT
     PyModule_AddIntConstant(m, "SO_REUSEPORT", SO_REUSEPORT);
+#endif
 #endif
 #ifdef  SO_SNDBUF
     PyModule_AddIntConstant(m, "SO_SNDBUF", SO_SNDBUF);

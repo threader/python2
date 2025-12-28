@@ -125,6 +125,11 @@ The :mod:`urlparse` module defines the following functions:
    decomposed before parsing, or is not a Unicode string, no error will be
    raised.
 
+   .. warning::
+
+      :func:`urlparse` does not perform validation.  See :ref:`URL parsing
+      security <url-parsing-security>` for details.
+
    .. versionchanged:: 2.5
       Added attributes to return value.
 
@@ -136,7 +141,7 @@ The :mod:`urlparse` module defines the following functions:
       now raise :exc:`ValueError`.
 
 
-.. function:: parse_qs(qs[, keep_blank_values[, strict_parsing[, max_num_fields]]])
+.. function:: parse_qs(qs[, keep_blank_values[, strict_parsing[, max_num_fields[, separator='&']]]])
 
    Parse a query string given as a string argument (data of type
    :mimetype:`application/x-www-form-urlencoded`).  Data are returned as a
@@ -157,6 +162,8 @@ The :mod:`urlparse` module defines the following functions:
    read. If set, then throws a :exc:`ValueError` if there are more than
    *max_num_fields* fields read.
 
+   The optional argument *separator* is the symbol to use for separating the query arguments. It defaults to `&`.
+
    Use the :func:`urllib.urlencode` function to convert such dictionaries into
    query strings.
 
@@ -166,7 +173,12 @@ The :mod:`urlparse` module defines the following functions:
    .. versionchanged:: 2.7.16
       Added *max_num_fields* parameter.
 
-.. function:: parse_qsl(qs[, keep_blank_values[, strict_parsing[, max_num_fields]]])
+   .. versionchanged:: 2.7 security update
+      Added *separator* parameter with the default value of `&`. Python versions earlier than Python 3.10 allowed using both ";" and "&" as
+      query parameter separator. This has been changed to allow only a single separator key, with "&" as the default separator.
+
+
+.. function:: parse_qsl(qs[, keep_blank_values[, strict_parsing[, max_num_fields[, separator='&']]]])
 
    Parse a query string given as a string argument (data of type
    :mimetype:`application/x-www-form-urlencoded`).  Data are returned as a list of
@@ -186,6 +198,8 @@ The :mod:`urlparse` module defines the following functions:
    read. If set, then throws a :exc:`ValueError` if there are more than
    *max_num_fields* fields read.
 
+   The optional argument *separator* is the symbol to use for separating the query arguments. It defaults to `&`.
+
    Use the :func:`urllib.urlencode` function to convert such lists of pairs into
    query strings.
 
@@ -194,6 +208,11 @@ The :mod:`urlparse` module defines the following functions:
 
    .. versionchanged:: 2.7.16
       Added *max_num_fields* parameter.
+
+   .. versionchanged:: 2.7 security update
+      Added *separator* parameter with the default value of `&`. Python versions earlier than Python 3.10 allowed using both ";" and "&" as
+      query parameter separator. This has been changed to allow only a single separator key, with "&" as the default separator.
+
 
 .. function:: urlunparse(parts)
 
@@ -248,6 +267,18 @@ The :mod:`urlparse` module defines the following functions:
    decomposed before parsing, or is not a Unicode string, no error will be
    raised.
 
+   Following the `WHATWG spec`_ that updates RFC 3986, ASCII newline
+   ``\n``, ``\r`` and tab ``\t`` characters are stripped from the URL.
+
+   Following some of the `WHATWG spec`_ that updates RFC 3986, leading C0
+   control and space characters are stripped from the URL. ``\n``,
+   ``\r`` and tab ``\t`` characters are removed from the URL at any position.
+
+   .. warning::
+
+      :func:`urlsplit` does not perform validation.  See :ref:`URL parsing
+      security <url-parsing-security>` for details.
+
    .. versionadded:: 2.2
 
    .. versionchanged:: 2.5
@@ -257,6 +288,13 @@ The :mod:`urlparse` module defines the following functions:
       Characters that affect netloc parsing under NFKC normalization will
       now raise :exc:`ValueError`.
 
+   .. versionchanged:: 2.7 security update
+      ASCII newline and tab characters are stripped from the URL.
+
+   .. versionchanged:: 2.7 security update
+      Leading WHATWG C0 control and space characters are stripped from the URL.
+
+.. _WHATWG spec: https://url.spec.whatwg.org/#concept-basic-url-parser
 
 .. function:: urlunsplit(parts)
 
@@ -308,6 +346,10 @@ The :mod:`urlparse` module defines the following functions:
 
 .. seealso::
 
+   `WHATWG`_ -  URL Living standard
+      Working Group for the URL Standard that defines URLs, domains, IP addresses, the
+      application/x-www-form-urlencoded format, and their API.
+
    :rfc:`3986` - Uniform Resource Identifiers
       This is the current standard (STD66). Any changes to urlparse module
       should conform to this. Certain deviations could be observed, which are
@@ -332,6 +374,37 @@ The :mod:`urlparse` module defines the following functions:
    :rfc:`1738` - Uniform Resource Locators (URL)
       This specifies the formal syntax and semantics of absolute URLs.
 
+.. _WHATWG: https://url.spec.whatwg.org/
+
+
+.. _url-parsing-security:
+
+URL parsing security
+--------------------
+
+The :func:`urlsplit` and :func:`urlparse` APIs do not perform **validation** of
+inputs.  They may not raise errors on inputs that other applications consider
+invalid.  They may also succeed on some inputs that might not be considered
+URLs elsewhere.  Their purpose is for practical functionality rather than
+purity.
+
+Instead of raising an exception on unusual input, they may instead return some
+component parts as empty strings. Or components may contain more than perhaps
+they should.
+
+We recommend that users of these APIs where the values may be used anywhere
+with security implications code defensively. Do some verification within your
+code before trusting a returned component part.  Does that ``scheme`` make
+sense?  Is that a sensible ``path``?  Is there anything strange about that
+``hostname``?  etc.
+
+What constitutes a URL is not universally well defined.  Different applications
+have different needs and desired constraints.  For instance the living `WHATWG
+spec`_ describes what user facing web clients such as a web browser require.
+While :rfc:`3986` is more general.  These functions incorporate some aspects of
+both, but cannot be claimed compliant with either.  The APIs and existing user
+code with expectations on specific behaviors predate both standards leading us
+to be very cautious about making API behavior changes.
 
 .. _urlparse-result-object:
 

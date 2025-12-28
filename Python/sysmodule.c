@@ -1453,6 +1453,8 @@ _PySys_Init(void)
                         PyFloat_GetInfo());
     SET_SYS_FROM_STRING("long_info",
                         PyLong_GetInfo());
+    SET_SYS_FROM_STRING("_multiarch",
+                        PyString_FromString(MULTIARCH));
 #ifdef Py_USING_UNICODE
     SET_SYS_FROM_STRING("maxunicode",
                         PyInt_FromLong(PyUnicode_GetMax()));
@@ -1522,6 +1524,12 @@ _PySys_Init(void)
 #else
     SET_SYS_FROM_STRING("float_repr_style",
                         PyString_FromString("legacy"));
+#endif
+
+#ifdef Py_DEBUG
+	PyDict_SetItemString(sysdict, "pydebug", Py_True);
+#else
+	PyDict_SetItemString(sysdict, "pydebug", Py_False);
 #endif
 
 #undef SET_SYS_FROM_STRING

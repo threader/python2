@@ -160,7 +160,7 @@ Py_ssize_t pysqlite_row_length(pysqlite_Row* self, PyObject* args, PyObject* kwa
 PyObject* pysqlite_row_keys(pysqlite_Row* self, PyObject* args, PyObject* kwargs)
 {
     PyObject* list;
-    int nitems, i;
+    Py_ssize_t nitems, i;
 
     list = PyList_New(0);
     if (!list) {

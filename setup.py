@@ -35,6 +35,8 @@ COMPILED_WITH_PYDEBUG = ('--with-pydebug' in sysconfig.get_config_var("CONFIG_AR
 # This global variable is used to hold the list of modules to be disabled.
 disabled_module_list = []
 
+exit_status = 0
+
 def add_dir_to_list(dirlist, dir):
     """Add the directory 'dir' to the list 'dirlist' (at the front) if
     1) 'dir' is not already in 'dirlist'
@@ -108,6 +110,13 @@ def is_macosx_sdk_path(path):
     return ( (path.startswith('/usr/') and not path.startswith('/usr/local'))
                 or path.startswith('/System/')
                 or path.startswith('/Library/') )
+
+def grep_headers_for(function, headers):
+    for header in headers:
+        with open(header, 'r') as f:
+            if function in f.read():
+                return True
+    return False
 
 def find_file(filename, std_dirs, paths):
     """Searches for the directory where a given file is located,
@@ -302,11 +311,13 @@ class PyBuildExt(build_ext):
         # those environment variables passed into the setup.py phase.  Here's
         # a small set of useful ones.
         compiler = os.environ.get('CC')
+        # it's important to get CFLAGS from the environment for proper extension PGO support
+        cflags = os.environ.get('CFLAGS')
         args = {}
         # unfortunately, distutils doesn't let us provide separate C and C++
         # compilers
         if compiler is not None:
-            (ccshared,cflags) = sysconfig.get_config_vars('CCSHARED','CFLAGS')
+            (ccshared,) = sysconfig.get_config_vars('CCSHARED')
             args['compiler_so'] = compiler + ' ' + ccshared + ' ' + cflags
         self.compiler.set_executables(**args)
 
@@ -336,7 +347,10 @@ class PyBuildExt(build_ext):
                    " detect_modules() for the module's name.")
             print
 
+        global exit_status
+
         if self.failed:
+            exit_status = 1
             failed = self.failed[:]
             print
             print "Failed to build these modules:"
@@ -500,10 +514,10 @@ class PyBuildExt(build_ext):
             os.unlink(tmpfile)
 
     def detect_modules(self):
-        # Ensure that /usr/local is always used
-        if not cross_compiling:
-            add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')
-            add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')
+        # On Debian /usr/local is always used, so we don't include it twice
+        #if not cross_compiling:
+        #    add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')
+        #    add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')
         if cross_compiling:
             self.add_gcc_paths()
         self.add_multiarch_paths()
@@ -645,9 +659,11 @@ class PyBuildExt(build_ext):
         # fast string operations implemented in C
         exts.append( Extension('strop', ['stropmodule.c']) )
         # time operations and variables
-        exts.append( Extension('time', ['timemodule.c'],
+        exts.append( Extension('time', ['timemodule.c', 'pytime.c'],
+                               depends=['pytime.h'],
                                libraries=math_libs) )
-        exts.append( Extension('datetime', ['datetimemodule.c', 'timemodule.c'],
+        exts.append( Extension('datetime', ['datetimemodule.c', 'timemodule.c', 'pytime.c'],
+                               depends=['pytime.h'],
                                libraries=math_libs) )
         # fast iterator tools implemented in C
         exts.append( Extension("itertools", ["itertoolsmodule.c"]) )
@@ -850,8 +866,8 @@ class PyBuildExt(build_ext):
         exts.append( Extension('_csv', ['_csv.c']) )
 
         # socket(2)
-        exts.append( Extension('_socket', ['socketmodule.c', 'timemodule.c'],
-                               depends=['socketmodule.h'],
+        exts.append( Extension('_socket', ['socketmodule.c', 'timemodule.c', 'pytime.c'],
+                               depends=['socketmodule.h', 'pytime.h'],
                                libraries=math_libs) )
         # Detect SSL support for the socket module (via _ssl)
         search_for_ssl_incs_in = [
@@ -882,9 +898,12 @@ class PyBuildExt(build_ext):
             missing.append('_ssl')
 
         # find out which version of OpenSSL we have
-        openssl_ver = 0
+        openssl_major_re = re.compile(
+            '^\s*#\s*define\s+OPENSSL_VERSION_MAJOR\s+([0-9]+)' )
+        openssl_major = -1 # Filled only on OpenSSL 3.0
         openssl_ver_re = re.compile(
             '^\s*#\s*define\s+OPENSSL_VERSION_NUMBER\s+(0x[0-9a-fA-F]+)' )
+        openssl_ver = 0
 
         # look for the openssl version header on the compiler search path.
         opensslv_h = find_file('openssl/opensslv.h', [],
@@ -896,17 +915,22 @@ class PyBuildExt(build_ext):
             try:
                 incfile = open(name, 'r')
                 for line in incfile:
+                    m = openssl_major_re.match(line)
+                    if m:
+                        openssl_major = int(m.group(1))
                     m = openssl_ver_re.match(line)
                     if m:
-                        openssl_ver = eval(m.group(1))
+                        openssl_ver = int(m.group(1), 0)
             except IOError, msg:
                 print "IOError while reading opensshv.h:", msg
                 pass
 
+        min_openssl_major = 1
         min_openssl_ver = 0x00907000
         have_any_openssl = ssl_incs is not None and ssl_libs is not None
         have_usable_openssl = (have_any_openssl and
-                               openssl_ver >= min_openssl_ver)
+                               (openssl_ver >= min_openssl_ver or
+                                openssl_major >= min_openssl_major))
 
         if have_any_openssl:
             if have_usable_openssl:
@@ -920,7 +944,7 @@ class PyBuildExt(build_ext):
                 print ("warning: openssl 0x%08x is too old for _hashlib" %
                        openssl_ver)
                 missing.append('_hashlib')
-        if COMPILED_WITH_PYDEBUG or not have_usable_openssl:
+        if True or COMPILED_WITH_PYDEBUG or not have_usable_openssl:
             # The _sha module implements the SHA1 hash algorithm.
             exts.append( Extension('_sha', ['shamodule.c']) )
             # The _md5 module implements the RSA Data Security, Inc. MD5
@@ -931,7 +955,9 @@ class PyBuildExt(build_ext):
                             depends = ['md5.h']) )
 
         min_sha2_openssl_ver = 0x00908000
-        if COMPILED_WITH_PYDEBUG or openssl_ver < min_sha2_openssl_ver:
+        if (COMPILED_WITH_PYDEBUG or
+            (openssl_ver < min_sha2_openssl_ver and
+             openssl_major < min_openssl_major)):
             # OpenSSL doesn't do these until 0.9.8 so we'll bring our own hash
             exts.append( Extension('_sha256', ['sha256module.c']) )
             exts.append( Extension('_sha512', ['sha512module.c']) )
@@ -1136,7 +1162,13 @@ class PyBuildExt(build_ext):
             if db_setup_debug:
                 print "bsddb using BerkeleyDB lib:", db_ver, dblib
                 print "bsddb lib dir:", dblib_dir, " inc dir:", db_incdir
-            db_incs = [db_incdir]
+            # only add db_incdir/dblib_dir if not in the standard paths
+            if db_incdir in inc_dirs:
+                db_incs = []
+            else:
+                db_incs = [db_incdir]
+            if dblib_dir[0] in lib_dirs:
+                dblib_dir = []
             dblibs = [dblib]
             # We add the runtime_library_dirs argument because the
             # BerkeleyDB lib we're linking against often isn't in the
@@ -1239,8 +1271,10 @@ class PyBuildExt(build_ext):
             else:
                 sqlite_defines.append(('MODULE_NAME', '\\"sqlite3\\"'))
 
-            # Comment this out if you want the sqlite3 module to be able to load extensions.
-            sqlite_defines.append(("SQLITE_OMIT_LOAD_EXTENSION", "1"))
+            # Enable support for loadable extensions in the sqlite3 module
+            # if --enable-loadable-sqlite-extensions configure option is used.
+            if '--enable-loadable-sqlite-extensions' not in sysconfig.get_config_var("CONFIG_ARGS"):
+                sqlite_defines.append(("SQLITE_OMIT_LOAD_EXTENSION", "1"))
 
             if host_platform == 'darwin':
                 # In every directory on the search path search for a dynamic
@@ -1778,10 +1812,11 @@ class PyBuildExt(build_ext):
             addMacExtension('_Launch', app_kwds)
             addMacExtension('_CG', app_kwds)
 
-            exts.append( Extension('_Qt', ['qt/_Qtmodule.c'],
-                        extra_compile_args=carbon_extra_compile_args,
-                        extra_link_args=['-framework', 'QuickTime',
-                                     '-framework', 'Carbon']) )
+            ## the Quicktime Framework has been removed from Xcode 10.12
+            #exts.append( Extension('_Qt', ['qt/_Qtmodule.c'],
+                        #extra_compile_args=carbon_extra_compile_args,
+                        #extra_link_args=['-framework', 'QuickTime',
+                                     #'-framework', 'Carbon']) )
 
 
         self.extensions.extend(exts)
@@ -2027,46 +2062,8 @@ class PyBuildExt(build_ext):
                         )
         self.extensions.append(ext)
 
-        # XXX handle these, but how to detect?
-        # *** Uncomment and edit for PIL (TkImaging) extension only:
-        #       -DWITH_PIL -I../Extensions/Imaging/libImaging  tkImaging.c \
-        # *** Uncomment and edit for TOGL extension only:
-        #       -DWITH_TOGL togl.c \
-        # *** Uncomment these for TOGL extension only:
-        #       -lGL -lGLU -lXext -lXmu \
-
-    def configure_ctypes_darwin(self, ext):
-        # Darwin (OS X) uses preconfigured files, in
-        # the Modules/_ctypes/libffi_osx directory.
-        srcdir = sysconfig.get_config_var('srcdir')
-        ffi_srcdir = os.path.abspath(os.path.join(srcdir, 'Modules',
-                                                  '_ctypes', 'libffi_osx'))
-        sources = [os.path.join(ffi_srcdir, p)
-                   for p in ['ffi.c',
-                             'x86/darwin64.S',
-                             'x86/x86-darwin.S',
-                             'x86/x86-ffi_darwin.c',
-                             'x86/x86-ffi64.c',
-                             'powerpc/ppc-darwin.S',
-                             'powerpc/ppc-darwin_closure.S',
-                             'powerpc/ppc-ffi_darwin.c',
-                             'powerpc/ppc64-darwin_closure.S',
-                             ]]
-
-        # Add .S (preprocessed assembly) to C compiler source extensions.
-        self.compiler.src_extensions.append('.S')
-
-        include_dirs = [os.path.join(ffi_srcdir, 'include'),
-                        os.path.join(ffi_srcdir, 'powerpc')]
-        ext.include_dirs.extend(include_dirs)
-        ext.sources.extend(sources)
-        return True
-
     def configure_ctypes(self, ext):
         if not self.use_system_libffi:
-            if host_platform == 'darwin':
-                return self.configure_ctypes_darwin(ext)
-
             srcdir = sysconfig.get_config_var('srcdir')
             ffi_builddir = os.path.join(self.build_temp, 'libffi')
             ffi_srcdir = os.path.abspath(os.path.join(srcdir, 'Modules',
@@ -2116,7 +2113,11 @@ class PyBuildExt(build_ext):
         return True
 
     def detect_ctypes(self, inc_dirs, lib_dirs):
-        self.use_system_libffi = False
+        if (not sysconfig.get_config_var("LIBFFI_INCLUDEDIR") and host_platform == 'darwin'):
+            self.use_system_libffi = True
+        else:
+            self.use_system_libffi = '--with-system-ffi' in sysconfig.get_config_var("CONFIG_ARGS")
+
         include_dirs = []
         extra_compile_args = []
         extra_link_args = []
@@ -2129,11 +2130,9 @@ class PyBuildExt(build_ext):
 
         if host_platform == 'darwin':
             sources.append('_ctypes/malloc_closure.c')
-            sources.append('_ctypes/darwin/dlfcn_simple.c')
+            extra_compile_args.append('-DUSING_MALLOC_CLOSURE_DOT_C=1')
             extra_compile_args.append('-DMACOSX')
             include_dirs.append('_ctypes/darwin')
-# XXX Is this still needed?
-##            extra_link_args.extend(['-read_only_relocs', 'warning'])
 
         elif host_platform == 'sunos5':
             # XXX This shouldn't be necessary; it appears that some
@@ -2160,38 +2159,48 @@ class PyBuildExt(build_ext):
                              sources=['_ctypes/_ctypes_test.c'])
         self.extensions.extend([ext, ext_test])
 
-        if not '--with-system-ffi' in sysconfig.get_config_var("CONFIG_ARGS"):
-            return
-
-        if host_platform == 'darwin':
-            # OS X 10.5 comes with libffi.dylib; the include files are
-            # in /usr/include/ffi
-            inc_dirs.append('/usr/include/ffi')
-
-        ffi_inc = [sysconfig.get_config_var("LIBFFI_INCLUDEDIR")]
-        if not ffi_inc or ffi_inc[0] == '':
-            ffi_inc = find_file('ffi.h', [], inc_dirs)
-        if ffi_inc is not None:
-            ffi_h = ffi_inc[0] + '/ffi.h'
-            with open(ffi_h) as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith(('#define LIBFFI_H',
-                                        '#define ffi_wrapper_h')):
-                        break
-                else:
-                    ffi_inc = None
-                    print('Header file {} does not define LIBFFI_H or '
-                          'ffi_wrapper_h'.format(ffi_h))
+        ffi_inc = sysconfig.get_config_var("LIBFFI_INCLUDEDIR")
         ffi_lib = None
-        if ffi_inc is not None:
+
+        ffi_inc_dirs = inc_dirs[:]
+        if host_platform == 'darwin':
+            ffi_in_sdk = os.path.join(macosx_sdk_root(), "usr/include/ffi")
+
+            if not ffi_inc:
+                if os.path.exists(ffi_in_sdk):
+                    ext.extra_compile_args.append("-DUSING_APPLE_OS_LIBFFI=1")
+                    ffi_inc = ffi_in_sdk
+                    ffi_lib = 'ffi'
+                else:
+                    # OS X 10.5 comes with libffi.dylib; the include files are
+                    # in /usr/include/ffi
+                    ffi_inc_dirs.append('/usr/include/ffi')
+
+        if not ffi_inc:
+            found = find_file('ffi.h', [], ffi_inc_dirs)
+            if found:
+                ffi_inc = found[0]
+        if ffi_inc:
+            ffi_h = ffi_inc + '/ffi.h'
+            if not os.path.exists(ffi_h):
+                ffi_inc = None
+                print('Header file ' + ffi_h + ' does not exist')
+        if ffi_lib is None and ffi_inc:
             for lib_name in ('ffi_convenience', 'ffi_pic', 'ffi'):
                 if (self.compiler.find_library_file(lib_dirs, lib_name)):
                     ffi_lib = lib_name
                     break
 
         if ffi_inc and ffi_lib:
-            ext.include_dirs.extend(ffi_inc)
+            ffi_headers = glob(os.path.join(ffi_inc, '*.h'))
+            if grep_headers_for('ffi_prep_cif_var', ffi_headers):
+                ext.extra_compile_args.append("-DHAVE_FFI_PREP_CIF_VAR=1")
+            if grep_headers_for('ffi_prep_closure_loc', ffi_headers):
+                ext.extra_compile_args.append("-DHAVE_FFI_PREP_CLOSURE_LOC=1")
+            if grep_headers_for('ffi_closure_alloc', ffi_headers):
+                ext.extra_compile_args.append("-DHAVE_FFI_CLOSURE_ALLOC=1")
+
+            ext.include_dirs.append(ffi_inc)
             ext.libraries.append(ffi_lib)
             self.use_system_libffi = True
 
@@ -2346,6 +2355,7 @@ def main():
                      'Tools/scripts/2to3',
                      'Lib/smtpd.py']
         )
+    sys.exit(exit_status)
 
 # --install-platlib
 if __name__ == '__main__':

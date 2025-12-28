@@ -79,8 +79,6 @@ def get_python_inc(plat_specific=0, prefix=None):
     If 'prefix' is supplied, use it instead of sys.prefix or
     sys.exec_prefix -- i.e., ignore 'plat_specific'.
     """
-    if prefix is None:
-        prefix = plat_specific and EXEC_PREFIX or PREFIX
 
     if os.name == "posix":
         if python_build:
@@ -100,7 +98,14 @@ def get_python_inc(plat_specific=0, prefix=None):
                 # Include is located in the srcdir
                 inc_dir = os.path.join(srcdir, "Include")
             return inc_dir
-        return os.path.join(prefix, "include", "python" + get_python_version())
+        else:
+            if not (prefix is None):
+                return os.path.join(prefix, "include",
+                                    "python" + get_python_version())+(sys.pydebug and "_d" or "")
+            if plat_specific:
+                return get_config_var('CONFINCLUDEPY')
+            else:
+                return get_config_var('INCLUDEPY')
     elif os.name == "nt":
         return os.path.join(prefix, "include")
     elif os.name == "os2":
@@ -125,6 +130,7 @@ def get_python_lib(plat_specific=0, standard_lib=0, prefix=None):
     If 'prefix' is supplied, use it instead of sys.prefix or
     sys.exec_prefix -- i.e., ignore 'plat_specific'.
     """
+    is_default_prefix = not prefix or os.path.normpath(prefix) in ('/usr', '/usr/local')
     if prefix is None:
         prefix = plat_specific and EXEC_PREFIX or PREFIX
 
@@ -133,6 +139,8 @@ def get_python_lib(plat_specific=0, standard_lib=0, prefix=None):
                                  "lib", "python" + get_python_version())
         if standard_lib:
             return libpython
+        elif is_default_prefix and 'PYTHONUSERBASE' not in os.environ and 'real_prefix' not in sys.__dict__:
+            return os.path.join(libpython, "dist-packages")
         else:
             return os.path.join(libpython, "site-packages")
 
@@ -181,10 +189,12 @@ def customize_compiler(compiler):
                 _osx_support.customize_compiler(_config_vars)
                 _config_vars['CUSTOMIZED_OSX_COMPILER'] = 'True'
 
-        (cc, cxx, cflags, ccshared, ldshared, so_ext, ar, ar_flags) = \
-            get_config_vars('CC', 'CXX', 'CFLAGS',
-                            'CCSHARED', 'LDSHARED', 'SO', 'AR',
-                            'ARFLAGS')
+        (cc, cxx, cflags, extra_cflags, basecflags,
+         ccshared, ldshared, so_ext, ar, ar_flags,
+         configure_cppflags, configure_cflags, configure_ldflags) = \
+            get_config_vars('CC', 'CXX', 'CFLAGS', 'EXTRA_CFLAGS', 'BASECFLAGS',
+                            'CCSHARED', 'LDSHARED', 'SO', 'AR', 'ARFLAGS',
+                            'CONFIGURE_CPPFLAGS', 'CONFIGURE_CFLAGS', 'CONFIGURE_LDFLAGS')
 
         if 'CC' in os.environ:
             newcc = os.environ['CC']
@@ -205,13 +215,24 @@ def customize_compiler(compiler):
             cpp = cc + " -E"           # not always
         if 'LDFLAGS' in os.environ:
             ldshared = ldshared + ' ' + os.environ['LDFLAGS']
+        elif configure_ldflags:
+            ldshared = ldshared + ' ' + configure_ldflags
+        if 'BASECFLAGS' in os.environ:
+            basecflags = os.environ['BASECFLAGS']
         if 'CFLAGS' in os.environ:
-            cflags = cflags + ' ' + os.environ['CFLAGS']
+            cflags = ' '.join(str(x) for x in (basecflags, os.environ['CFLAGS'], extra_cflags) if x)
             ldshared = ldshared + ' ' + os.environ['CFLAGS']
+        elif configure_cflags:
+            cflags = ' '.join(str(x) for x in (basecflags, configure_cflags, extra_cflags) if x)
+            ldshared = ldshared + ' ' + configure_cflags
         if 'CPPFLAGS' in os.environ:
             cpp = cpp + ' ' + os.environ['CPPFLAGS']
             cflags = cflags + ' ' + os.environ['CPPFLAGS']
             ldshared = ldshared + ' ' + os.environ['CPPFLAGS']
+        elif configure_cppflags:
+            cpp = cpp + ' ' + configure_cppflags
+            cflags = cflags + ' ' + configure_cppflags
+            ldshared = ldshared + ' ' + configure_cppflags
         if 'AR' in os.environ:
             ar = os.environ['AR']
         if 'ARFLAGS' in os.environ:
@@ -225,7 +246,7 @@ def customize_compiler(compiler):
             compiler=cc_cmd,
             compiler_so=cc_cmd + ' ' + ccshared,
             compiler_cxx=cxx,
-            linker_so=ldshared,
+            linker_so=ldshared + ' ' + ccshared,
             linker_exe=cc,
             archiver=archiver)
 
@@ -254,7 +275,7 @@ def get_makefile_filename():
     if python_build:
         return os.path.join(project_base, "Makefile")
     lib_dir = get_python_lib(plat_specific=1, standard_lib=1)
-    return os.path.join(lib_dir, "config", "Makefile")
+    return os.path.join(get_config_var('LIBPL'), "Makefile")
 
 
 def parse_config_h(fp, g=None):
@@ -330,11 +351,19 @@ def parse_makefile(fn, g=None):
                     done[n] = v
 
     # do variable interpolation here
-    while notdone:
-        for name in notdone.keys():
+    variables = list(notdone.keys())
+
+    # Variables with a 'PY_' prefix in the makefile. These need to
+    # be made available without that prefix through sysconfig.
+    # Special care is needed to ensure that variable expansion works, even
+    # if the expansion uses the name without a prefix.
+    renamed_variables = ('CFLAGS', 'LDFLAGS', 'CPPFLAGS')
+
+    while len(variables) > 0:
+        for name in tuple(variables):
             value = notdone[name]
             m = _findvar1_rx.search(value) or _findvar2_rx.search(value)
-            if m:
+            if m is not None:
                 n = m.group(1)
                 found = True
                 if n in done:
@@ -345,25 +374,47 @@ def parse_makefile(fn, g=None):
                 elif n in os.environ:
                     # do it like make: fall back to environment
                     item = os.environ[n]
+
+                elif n in renamed_variables:
+                    if name.startswith('PY_') and name[3:] in renamed_variables:
+                        item = ""
+
+                    elif 'PY_' + n in notdone:
+                        found = False
+
+                    else:
+                        item = str(done['PY_' + n])
+
                 else:
                     done[n] = item = ""
+
                 if found:
                     after = value[m.end():]
                     value = value[:m.start()] + item + after
                     if "$" in after:
                         notdone[name] = value
                     else:
-                        try: value = int(value)
+                        try:
+                            value = int(value)
                         except ValueError:
                             done[name] = value.strip()
                         else:
                             done[name] = value
-                        del notdone[name]
-            else:
-                # bogus variable reference; just drop it since we can't deal
-                del notdone[name]
+                        variables.remove(name)
 
-    fp.close()
+                        if name.startswith('PY_') \
+                        and name[3:] in renamed_variables:
+
+                            name = name[3:]
+                            if name not in done:
+                                done[name] = value
+
+
+            else:
+                # bogus variable reference (e.g. "prefix=$/opt/python");
+                # just drop it since we can't deal
+                done[name] = value
+                variables.remove(name)
 
     # strip spurious spaces
     for k, v in done.items():

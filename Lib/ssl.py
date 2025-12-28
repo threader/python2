@@ -580,6 +580,38 @@ class SSLSocket(socket):
             if e.errno != errno.ENOTCONN:
                 raise
             connected = False
+            sock_timeout = self.gettimeout()
+            self.settimeout(0)
+            try:
+                # We are not connected so this is not supposed to block, but
+                # testing revealed otherwise on macOS and Windows so we do
+                # the non-blocking dance regardless. Our raise when any data
+                # is found means consuming the data is harmless.
+                notconn_pre_handshake_data = self._sock.recv(1)
+            except socket_error as e:
+                # EINVAL occurs for recv(1) on non-connected on unix sockets.
+                if e.errno not in (errno.ENOTCONN, errno.EINVAL):
+                    raise
+                notconn_pre_handshake_data = b''
+            self.settimeout(sock_timeout)
+            if notconn_pre_handshake_data:
+                # This prevents pending data sent to the socket before it was
+                # closed from escaping to the caller who could otherwise
+                # presume it came through a successful TLS connection.
+                reason = "Closed before TLS handshake with data in recv buffer."
+                notconn_pre_handshake_data_error = SSLError(e.errno, reason)
+                # Add the SSLError attributes that _ssl.c always adds.
+                notconn_pre_handshake_data_error.reason = reason
+                notconn_pre_handshake_data_error.library = None
+                try:
+                    self.close()
+                except socket_error:
+                    pass
+                try:
+                    raise notconn_pre_handshake_data_error
+                finally:
+                    # Explicitly break the reference cycle.
+                    notconn_pre_handshake_data_error = None
         else:
             connected = True
 

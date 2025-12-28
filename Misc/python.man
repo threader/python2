@@ -337,7 +337,7 @@ exception).  Error messages are written to stderr.
 These are subject to difference depending on local installation
 conventions; ${prefix} and ${exec_prefix} are installation-dependent
 and should be interpreted as for GNU software; they may be the same.
-The default for both is \fI/usr/local\fP.
+On Debian GNU/{Hurd,Linux} the default for both is \fI/usr\fP.
 .IP \fI${exec_prefix}/bin/python2\fP
 Recommended location of the interpreter.
 .PP
@@ -456,7 +456,8 @@ The Python Software Foundation: https://www.python.org/psf/
 .SH INTERNET RESOURCES
 Main website:  https://www.python.org/
 .br
-Documentation:  https://docs.python.org/2/
+Documentation:  file:///usr/share/doc/python2.7/html/index.html (python-doc package)
+or https://docs.python.org/2/
 .br
 Developer resources:  https://docs.python.org/devguide/
 .br

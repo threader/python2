@@ -295,8 +295,8 @@ class BuildExtTestCase(support.TempdirManager,
         finally:
             os.chdir(old_wd)
         self.assertTrue(os.path.exists(so_file))
-        self.assertEqual(os.path.splitext(so_file)[-1],
-                         sysconfig.get_config_var('SO'))
+        so_ext = sysconfig.get_config_var('SO')
+        self.assertEqual(so_file[len(so_file)-len(so_ext):], so_ext)
         so_dir = os.path.dirname(so_file)
         self.assertEqual(so_dir, other_tmp_dir)
         cmd.compiler = None
@@ -304,8 +304,7 @@ class BuildExtTestCase(support.TempdirManager,
         cmd.run()
         so_file = cmd.get_outputs()[0]
         self.assertTrue(os.path.exists(so_file))
-        self.assertEqual(os.path.splitext(so_file)[-1],
-                         sysconfig.get_config_var('SO'))
+        self.assertEqual(so_file[len(so_file)-len(so_ext):], so_ext)
         so_dir = os.path.dirname(so_file)
         self.assertEqual(so_dir, cmd.build_lib)
 
@@ -491,7 +490,7 @@ class BuildExtTestCase(support.TempdirManager,
         # format the target value as defined in the Apple
         # Availability Macros.  We can't use the macro names since
         # at least one value we test with will not exist yet.
-        if target[1] < 10:
+        if target[:2] < (10, 10):
             # for 10.1 through 10.9.x -> "10n0"
             target = '%02d%01d0' % target
         else:

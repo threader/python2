@@ -372,7 +372,9 @@ calculate_path(void)
     char *path = getenv("PATH");
     char *prog = Py_GetProgramName();
     char argv0_path[MAXPATHLEN+1];
+#ifdef WITH_ZIP_PATH
     char zip_path[MAXPATHLEN+1];
+#endif
     int pfound, efound; /* 1 if found; -1 if found build directory */
     char *buf;
     size_t bufsz;
@@ -382,11 +384,7 @@ calculate_path(void)
     NSModule pythonModule;
 #endif
 #ifdef __APPLE__
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_4
     uint32_t nsexeclength = MAXPATHLEN;
-#else
-    unsigned long nsexeclength = MAXPATHLEN;
-#endif
 #endif
 
         /* If there is no slash in the argv0 path, then we have to
@@ -512,6 +510,7 @@ calculate_path(void)
     else
         reduce(prefix);
 
+#ifdef WITH_ZIP_PATH
     strncpy(zip_path, prefix, MAXPATHLEN);
     zip_path[MAXPATHLEN] = '\0';
     if (pfound > 0) { /* Use the reduced prefix returned by Py_GetPrefix() */
@@ -524,6 +523,7 @@ calculate_path(void)
     bufsz = strlen(zip_path);   /* Replace "00" with version */
     zip_path[bufsz - 6] = VERSION[0];
     zip_path[bufsz - 5] = VERSION[2];
+#endif
 
     if (!(efound = search_for_exec_prefix(argv0_path, home))) {
         if (!Py_FrozenFlag)
@@ -563,7 +563,9 @@ calculate_path(void)
         defpath = delim + 1;
     }
 
+#ifdef WITH_ZIP_PATH
     bufsz += strlen(zip_path) + 1;
+#endif
     bufsz += strlen(exec_prefix) + 1;
 
     /* This is the only malloc call in this file */
@@ -584,9 +586,11 @@ calculate_path(void)
         else
             buf[0] = '\0';
 
+#ifdef WITH_ZIP_PATH
         /* Next is the default zip path */
         strcat(buf, zip_path);
         strcat(buf, delimiter);
+#endif
 
         /* Next goes merge of compile-time $PYTHONPATH with
          * dynamically located prefix.

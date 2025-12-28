@@ -1,7 +1,10 @@
 """Statistics analyzer for HotShot."""
 
-import profile
-import pstats
+try:
+    import profile
+    import pstats
+except ImportError, e:
+    raise ImportError, str(e) + '; please install the python-profiler package'
 
 import hotshot.log
 

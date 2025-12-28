@@ -285,24 +285,25 @@ These are useful if you want more control, or if you want to employ some of the
 algorithms implemented in this module in other circumstances.
 
 
-.. function:: parse(fp[, environ[, keep_blank_values[, strict_parsing]]])
+.. function:: parse(fp[, environ[, keep_blank_values[, strict_parsing[, separator="&"]]]])
 
    Parse a query in the environment or from a file (the file defaults to
-   ``sys.stdin`` and environment defaults to ``os.environ``).  The *keep_blank_values* and *strict_parsing* parameters are
+   ``sys.stdin`` and environment defaults to ``os.environ``).  The
+   *keep_blank_values*, *strict_parsing* and *separator* parameters are
    passed to :func:`urlparse.parse_qs` unchanged.
 
 
-.. function:: parse_qs(qs[, keep_blank_values[, strict_parsing[, max_num_fields]]])
+.. function:: parse_qs(qs[, keep_blank_values[, strict_parsing[, max_num_fields[, separator]]]])
 
    This function is deprecated in this module. Use :func:`urlparse.parse_qs`
    instead. It is maintained here only for backward compatibility.
 
-.. function:: parse_qsl(qs[, keep_blank_values[, strict_parsing[, max_num_fields]]])
+.. function:: parse_qsl(qs[, keep_blank_values[, strict_parsing[, max_num_fields[, separator]]]])
 
    This function is deprecated in this module. Use :func:`urlparse.parse_qsl`
    instead. It is maintained here only for backward compatibility.
 
-.. function:: parse_multipart(fp, pdict)
+.. function:: parse_multipart(fp, pdict, separator="&")
 
    Parse input of type :mimetype:`multipart/form-data` (for  file uploads).
    Arguments are *fp* for the input file and *pdict* for a dictionary containing
@@ -315,6 +316,9 @@ algorithms implemented in this module in other circumstances.
 
    Note that this does not parse nested multipart parts --- use
    :class:`FieldStorage` for that.
+
+   .. versionchanged:: 2.7 security update
+      Added the *separator* parameter.
 
 
 .. function:: parse_header(string)

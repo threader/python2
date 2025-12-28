@@ -87,7 +87,7 @@ class BuildDumbTestCase(support.TempdirManager,
             fp.close()
 
         contents = sorted(filter(None, map(os.path.basename, contents)))
-        wanted = ['foo-0.1-py%s.%s.egg-info' % sys.version_info[:2], 'foo.py']
+        wanted = ['foo-0.1.egg-info', 'foo.py']
         if not sys.dont_write_bytecode:
             wanted.append('foo.pyc')
         self.assertEqual(contents, sorted(wanted))

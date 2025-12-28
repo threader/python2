@@ -2,6 +2,9 @@
 
 from test import test_support
 
+# Add alias for tests backported from Py3 after gratuitous rename in bpo-2621
+support = test_support
+
 # Skip these tests if there is no posix module.
 posix = test_support.import_module('posix')
 
@@ -637,6 +640,198 @@ class PosixTester(unittest.TestCase):
         self.assertRaises(TypeError, os.stat, fn_with_NUL)
 
 
+    # tests for the posix *at functions follow
+
+    @unittest.skipUnless(hasattr(posix, 'faccessat'), "test needs posix.faccessat()")
+    def test_faccessat(self):
+        f = posix.open(posix.getcwd(), posix.O_RDONLY)
+        try:
+            self.assertTrue(posix.faccessat(f, support.TESTFN, os.R_OK))
+        finally:
+            posix.close(f)
+
+    @unittest.skipUnless(hasattr(posix, 'fchmodat'), "test needs posix.fchmodat()")
+    def test_fchmodat(self):
+        os.chmod(support.TESTFN, stat.S_IRUSR)
+
+        f = posix.open(posix.getcwd(), posix.O_RDONLY)
+        try:
+            posix.fchmodat(f, support.TESTFN, stat.S_IRUSR | stat.S_IWUSR)
+
+            s = posix.stat(support.TESTFN)
+            self.assertEqual(s[0] & stat.S_IRWXU, stat.S_IRUSR | stat.S_IWUSR)
+        finally:
+            posix.close(f)
+
+    @unittest.skipUnless(hasattr(posix, 'fchownat'), "test needs posix.fchownat()")
+    def test_fchownat(self):
+        support.unlink(support.TESTFN)
+        open(support.TESTFN, 'w').close()
+
+        f = posix.open(posix.getcwd(), posix.O_RDONLY)
+        try:
+            posix.fchownat(f, support.TESTFN, os.getuid(), os.getgid())
+        finally:
+            posix.close(f)
+
+    @unittest.skipUnless(hasattr(posix, 'fstatat'), "test needs posix.fstatat()")
+    def test_fstatat(self):
+        support.unlink(support.TESTFN)
+        with open(support.TESTFN, 'w') as outfile:
+            outfile.write("testline\n")
+
+        f = posix.open(posix.getcwd(), posix.O_RDONLY)
+        try:
+            s1 = posix.stat(support.TESTFN)
+            s2 = posix.fstatat(f, support.TESTFN)
+            self.assertEqual(s1, s2)
+        finally:
+            posix.close(f)
+
+    @unittest.skipUnless(hasattr(posix, 'futimesat'), "test needs posix.futimesat()")
+    def test_futimesat(self):
+        f = posix.open(posix.getcwd(), posix.O_RDONLY)
+        try:
+            now = time.time()
+            posix.futimesat(f, support.TESTFN, None)
+            self.assertRaises(TypeError, posix.futimesat, f, support.TESTFN, (None, None))
+            self.assertRaises(TypeError, posix.futimesat, f, support.TESTFN, (now, None))
+            self.assertRaises(TypeError, posix.futimesat, f, support.TESTFN, (None, now))
+            posix.futimesat(f, support.TESTFN, (int(now), int(now)))
+            posix.futimesat(f, support.TESTFN, (now, now))
+        finally:
+            posix.close(f)
+
+    @unittest.skipUnless(hasattr(posix, 'linkat'), "test needs posix.linkat()")
+    def test_linkat(self):
+        f = posix.open(posix.getcwd(), posix.O_RDONLY)
+        try:
+            posix.linkat(f, support.TESTFN, f, support.TESTFN + 'link')
+            # should have same inodes
+            self.assertEqual(posix.stat(support.TESTFN)[1],
+                posix.stat(support.TESTFN + 'link')[1])
+        finally:
+            posix.close(f)
+            support.unlink(support.TESTFN + 'link')
+
+    @unittest.skipUnless(hasattr(posix, 'mkdirat'), "test needs posix.mkdirat()")
+    def test_mkdirat(self):
+        f = posix.open(posix.getcwd(), posix.O_RDONLY)
+        try:
+            posix.mkdirat(f, support.TESTFN + 'dir')
+            posix.stat(support.TESTFN + 'dir') # should not raise exception
+        finally:
+            posix.close(f)
+            support.rmtree(support.TESTFN + 'dir')
+
+    @unittest.skipUnless(hasattr(posix, 'mknodat') and hasattr(stat, 'S_IFIFO'),
+                         "don't have mknodat()/S_IFIFO")
+    def test_mknodat(self):
+        # Test using mknodat() to create a FIFO (the only use specified
+        # by POSIX).
+        support.unlink(support.TESTFN)
+        mode = stat.S_IFIFO | stat.S_IRUSR | stat.S_IWUSR
+        f = posix.open(posix.getcwd(), posix.O_RDONLY)
+        try:
+            posix.mknodat(f, support.TESTFN, mode, 0)
+        except OSError as e:
+            # Some old systems don't allow unprivileged users to use
+            # mknod(), or only support creating device nodes.
+            self.assertIn(e.errno, (errno.EPERM, errno.EINVAL))
+        else:
+            self.assertTrue(stat.S_ISFIFO(posix.stat(support.TESTFN).st_mode))
+        finally:
+            posix.close(f)
+
+    @unittest.skipUnless(hasattr(posix, 'openat'), "test needs posix.openat()")
+    def test_openat(self):
+        support.unlink(support.TESTFN)
+        with open(support.TESTFN, 'w') as outfile:
+            outfile.write("testline\n")
+        a = posix.open(posix.getcwd(), posix.O_RDONLY)
+        b = posix.openat(a, support.TESTFN, posix.O_RDONLY)
+        try:
+            res = posix.read(b, 9).decode(encoding="utf-8")
+            self.assertEqual("testline\n", res)
+        finally:
+            posix.close(a)
+            posix.close(b)
+
+    @unittest.skipUnless(hasattr(posix, 'readlinkat'), "test needs posix.readlinkat()")
+    def test_readlinkat(self):
+        os.symlink(support.TESTFN, support.TESTFN + 'link')
+        f = posix.open(posix.getcwd(), posix.O_RDONLY)
+        try:
+            self.assertEqual(posix.readlink(support.TESTFN + 'link'),
+                posix.readlinkat(f, support.TESTFN + 'link'))
+        finally:
+            support.unlink(support.TESTFN + 'link')
+            posix.close(f)
+
+    @unittest.skipUnless(hasattr(posix, 'renameat'), "test needs posix.renameat()")
+    def test_renameat(self):
+        support.unlink(support.TESTFN)
+        open(support.TESTFN + 'ren', 'w').close()
+        f = posix.open(posix.getcwd(), posix.O_RDONLY)
+        try:
+            posix.renameat(f, support.TESTFN + 'ren', f, support.TESTFN)
+        except:
+            posix.rename(support.TESTFN + 'ren', support.TESTFN)
+            raise
+        else:
+            posix.stat(support.TESTFN) # should not throw exception
+        finally:
+            posix.close(f)
+
+    @unittest.skipUnless(hasattr(posix, 'symlinkat'), "test needs posix.symlinkat()")
+    def test_symlinkat(self):
+        f = posix.open(posix.getcwd(), posix.O_RDONLY)
+        try:
+            posix.symlinkat(support.TESTFN, f, support.TESTFN + 'link')
+            self.assertEqual(posix.readlink(support.TESTFN + 'link'), support.TESTFN)
+        finally:
+            posix.close(f)
+            support.unlink(support.TESTFN + 'link')
+
+    @unittest.skipUnless(hasattr(posix, 'unlinkat'), "test needs posix.unlinkat()")
+    def test_unlinkat(self):
+        f = posix.open(posix.getcwd(), posix.O_RDONLY)
+        open(support.TESTFN + 'del', 'w').close()
+        posix.stat(support.TESTFN + 'del') # should not throw exception
+        try:
+            posix.unlinkat(f, support.TESTFN + 'del')
+        except:
+            support.unlink(support.TESTFN + 'del')
+            raise
+        else:
+            self.assertRaises(OSError, posix.stat, support.TESTFN + 'link')
+        finally:
+            posix.close(f)
+
+    @unittest.skipUnless(hasattr(posix, 'utimensat'), "test needs posix.utimensat()")
+    def test_utimensat(self):
+        f = posix.open(posix.getcwd(), posix.O_RDONLY)
+        try:
+            now = time.time()
+            posix.utimensat(f, support.TESTFN, None, None)
+            self.assertRaises(TypeError, posix.utimensat, f, support.TESTFN, (None, None), (None, None))
+            self.assertRaises(TypeError, posix.utimensat, f, support.TESTFN, (now, 0), None)
+            self.assertRaises(TypeError, posix.utimensat, f, support.TESTFN, None, (now, 0))
+            posix.utimensat(f, support.TESTFN, (int(now), int((now - int(now)) * 1e9)),
+                    (int(now), int((now - int(now)) * 1e9)))
+        finally:
+            posix.close(f)
+
+    @unittest.skipUnless(hasattr(posix, 'mkfifoat'), "don't have mkfifoat()")
+    def test_mkfifoat(self):
+        support.unlink(support.TESTFN)
+        f = posix.open(posix.getcwd(), posix.O_RDONLY)
+        try:
+            posix.mkfifoat(f, support.TESTFN, stat.S_IRUSR | stat.S_IWUSR)
+            self.assertTrue(stat.S_ISFIFO(posix.stat(support.TESTFN).st_mode))
+        finally:
+            posix.close(f)
+
 class PosixGroupsTester(unittest.TestCase):
 
     def setUp(self):
@@ -673,8 +868,166 @@ class PosixGroupsTester(unittest.TestCase):
             self.assertListEqual(groups, posix.getgroups())
 
 
+@unittest.skipUnless(sys.platform == "darwin", "test weak linking on macOS")
+class TestPosixWeaklinking(unittest.TestCase):
+    # These test cases verify that weak linking support on macOS works
+    # as expected. These cases only test new behaviour introduced by weak linking,
+    # regular behaviour is tested by the normal test cases.
+    #
+    # See the section on Weak Linking in Mac/README.txt for more information.
+    def setUp(self):
+        import sysconfig
+        import platform
+
+        config_vars = sysconfig.get_config_vars()
+        self.available = { nm for nm in config_vars if nm.startswith("HAVE_") and config_vars[nm] }
+        self.mac_ver = tuple(int(part) for part in platform.mac_ver()[0].split("."))
+
+    def _verify_available(self, name):
+        if name not in self.available:
+            raise unittest.SkipTest(name + " not weak-linked")
+
+    def test_pwritev(self):
+        self._verify_available("HAVE_PWRITEV")
+        if self.mac_ver >= (10, 16):
+            self.assertTrue(hasattr(os, "pwritev"), "os.pwritev is not available")
+            self.assertTrue(hasattr(os, "preadv"), "os.readv is not available")
+
+        else:
+            self.assertFalse(hasattr(os, "pwritev"), "os.pwritev is available")
+            self.assertFalse(hasattr(os, "preadv"), "os.readv is available")
+
+    def test_stat(self):
+        self._verify_available("HAVE_FSTATAT")
+        if self.mac_ver < (10, 10):
+            with self.assertRaisesRegex(NotImplementedError, "dir_fd unavailable"):
+                os.stat("file", dir_fd=0)
+
+    def test_access(self):
+        self._verify_available("HAVE_FACCESSAT")
+        if self.mac_ver < (10, 10):
+            with self.assertRaisesRegex(NotImplementedError, "dir_fd unavailable"):
+                os.access("file", os.R_OK, dir_fd=0)
+
+            with self.assertRaisesRegex(NotImplementedError, "follow_symlinks unavailable"):
+                os.access("file", os.R_OK, follow_symlinks=False)
+
+            with self.assertRaisesRegex(NotImplementedError, "effective_ids unavailable"):
+                os.access("file", os.R_OK, effective_ids=True)
+
+    def test_chmod(self):
+        self._verify_available("HAVE_FCHMODAT")
+        if self.mac_ver < (10, 10):
+            with self.assertRaisesRegex(NotImplementedError, "dir_fd unavailable"):
+                os.chmod("file", 0o644, dir_fd=0)
+
+    def test_chown(self):
+        self._verify_available("HAVE_FCHOWNAT")
+        if self.mac_ver < (10, 10):
+            with self.assertRaisesRegex(NotImplementedError, "dir_fd unavailable"):
+                os.chown("file", 0, 0, dir_fd=0)
+
+    def test_link(self):
+        self._verify_available("HAVE_LINKAT")
+        if self.mac_ver < (10, 10):
+            with self.assertRaisesRegex(NotImplementedError, "src_dir_fd unavailable"):
+                os.link("source", "target",  src_dir_fd=0)
+
+            with self.assertRaisesRegex(NotImplementedError, "dst_dir_fd unavailable"):
+                os.link("source", "target",  dst_dir_fd=0)
+
+            with self.assertRaisesRegex(NotImplementedError, "src_dir_fd unavailable"):
+                os.link("source", "target",  src_dir_fd=0, dst_dir_fd=0)
+
+            # issue 41355: !HAVE_LINKAT code path ignores the follow_symlinks flag
+            with os_helper.temp_dir() as base_path:
+                link_path = os.path.join(base_path, "link")
+                target_path = os.path.join(base_path, "target")
+                source_path = os.path.join(base_path, "source")
+
+                with open(source_path, "w") as fp:
+                    fp.write("data")
+
+                os.symlink("target", link_path)
+
+                # Calling os.link should fail in the link(2) call, and
+                # should not reject *follow_symlinks* (to match the
+                # behaviour you'd get when building on a platform without
+                # linkat)
+                with self.assertRaises(FileExistsError):
+                    os.link(source_path, link_path, follow_symlinks=True)
+
+                with self.assertRaises(FileExistsError):
+                    os.link(source_path, link_path, follow_symlinks=False)
+
+
+    def test_listdir_scandir(self):
+        self._verify_available("HAVE_FDOPENDIR")
+        if self.mac_ver < (10, 10):
+            with self.assertRaisesRegex(TypeError, "listdir: path should be string, bytes, os.PathLike or None, not int"):
+                os.listdir(0)
+
+            with self.assertRaisesRegex(TypeError, "scandir: path should be string, bytes, os.PathLike or None, not int"):
+                os.scandir(0)
+
+    def test_mkdir(self):
+        self._verify_available("HAVE_MKDIRAT")
+        if self.mac_ver < (10, 10):
+            with self.assertRaisesRegex(NotImplementedError, "dir_fd unavailable"):
+                os.mkdir("dir", dir_fd=0)
+
+    def test_rename_replace(self):
+        self._verify_available("HAVE_RENAMEAT")
+        if self.mac_ver < (10, 10):
+            with self.assertRaisesRegex(NotImplementedError, "src_dir_fd and dst_dir_fd unavailable"):
+                os.rename("a", "b", src_dir_fd=0)
+
+            with self.assertRaisesRegex(NotImplementedError, "src_dir_fd and dst_dir_fd unavailable"):
+                os.rename("a", "b", dst_dir_fd=0)
+
+            with self.assertRaisesRegex(NotImplementedError, "src_dir_fd and dst_dir_fd unavailable"):
+                os.replace("a", "b", src_dir_fd=0)
+
+            with self.assertRaisesRegex(NotImplementedError, "src_dir_fd and dst_dir_fd unavailable"):
+                os.replace("a", "b", dst_dir_fd=0)
+
+    def test_unlink_rmdir(self):
+        self._verify_available("HAVE_UNLINKAT")
+        if self.mac_ver < (10, 10):
+            with self.assertRaisesRegex(NotImplementedError, "dir_fd unavailable"):
+                os.unlink("path", dir_fd=0)
+
+            with self.assertRaisesRegex(NotImplementedError, "dir_fd unavailable"):
+                os.rmdir("path", dir_fd=0)
+
+    def test_open(self):
+        self._verify_available("HAVE_OPENAT")
+        if self.mac_ver < (10, 10):
+            with self.assertRaisesRegex(NotImplementedError, "dir_fd unavailable"):
+                os.open("path", os.O_RDONLY, dir_fd=0)
+
+    def test_readlink(self):
+        self._verify_available("HAVE_READLINKAT")
+        if self.mac_ver < (10, 10):
+            with self.assertRaisesRegex(NotImplementedError, "dir_fd unavailable"):
+                os.readlink("path",  dir_fd=0)
+
+    def test_symlink(self):
+        self._verify_available("HAVE_SYMLINKAT")
+        if self.mac_ver < (10, 10):
+            with self.assertRaisesRegex(NotImplementedError, "dir_fd unavailable"):
+                os.symlink("a", "b",  dir_fd=0)
+
+    def test_utime(self):
+        self._verify_available("HAVE_FUTIMENS")
+        self._verify_available("HAVE_UTIMENSAT")
+        if self.mac_ver < (10, 13):
+            with self.assertRaisesRegex(NotImplementedError, "dir_fd unavailable"):
+                os.utime("path", dir_fd=0)
+
+
 def test_main():
-    test_support.run_unittest(PosixTester, PosixGroupsTester)
+    test_support.run_unittest(PosixTester, PosixGroupsTester, TestPosixWeaklinking)
 
 if __name__ == '__main__':
     test_main()

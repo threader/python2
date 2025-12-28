@@ -5,12 +5,12 @@ dnl ***********************************************
 # Set VERSION so we only need to edit in one place (i.e., here)
 m4_define(PYTHON_VERSION, 2.7)
 
-AC_PREREQ(2.65)
+AC_PREREQ([2.71])
 
 AC_REVISION($Revision$)
 AC_INIT(python, PYTHON_VERSION, https://bugs.python.org/)
 AC_CONFIG_SRCDIR([Include/object.h])
-AC_CONFIG_HEADER(pyconfig.h)
+AC_CONFIG_HEADERS([pyconfig.h])
 
 AC_CANONICAL_HOST
 AC_SUBST(build)
@@ -176,7 +176,11 @@ fi
 AC_SUBST(LIPO_32BIT_FLAGS)
 AC_MSG_CHECKING(for --with-universal-archs)
 AC_ARG_WITH(universal-archs,
-    AS_HELP_STRING([--with-universal-archs=ARCH], [select architectures for universal build ("32-bit", "64-bit", "3-way", "intel", "intel-32", "intel-64", or "all")]),
+    AS_HELP_STRING([--with-universal-archs=ARCH],
+                   [specify the kind of universal binary that should be created. this option is
+                    only valid when --enable-universalsdk is set; options are:
+                    ("universal2", "32-bit", "64-bit", "3-way", "intel", "intel-32", "intel-64", or "all")
+                    see Mac/README.rst]),
 [
 	UNIVERSAL_ARCHS="$withval"
 ],
@@ -511,8 +515,16 @@ then
 fi
 AC_MSG_RESULT($MACHDEP)
 
+MULTIARCH=$($CC --print-multiarch 2>/dev/null)
+AC_SUBST(MULTIARCH)
+
+
 AC_SUBST(PLATDIR)
-PLATDIR=plat-$MACHDEP
+if test -n "$MULTIARCH"; then
+  PLATDIR=plat-$MULTIARCH
+else
+  PLATDIR=plat-$MACHDEP
+fi
 
 # And add extra plat-mac for darwin
 AC_SUBST(EXTRAPLATDIR)
@@ -647,14 +659,13 @@ if test "$MACHDEP" = "irix6" && test "$CC" != "gcc"; then
     fi
 fi
 
-# If the user set CFLAGS, use this instead of the automatically
-# determined setting
-preset_cflags="$CFLAGS"
-AC_PROG_CC
-if test ! -z "$preset_cflags"
-then
-	CFLAGS=$preset_cflags
+# Don't let AC_PROG_CC set the default CFLAGS. It normally sets -g -O2
+# when the compiler supports them, but we don't always want -O2, and
+# we set -g later.
+if test -z "$CFLAGS"; then
+        CFLAGS=
 fi
+AC_PROG_CC
 
 AC_SUBST(CXX)
 AC_SUBST(MAINCC)
@@ -778,7 +789,7 @@ AC_SUBST(LIBRARY)
 AC_MSG_CHECKING(LIBRARY)
 if test -z "$LIBRARY"
 then
-	LIBRARY='libpython$(VERSION).a'
+	LIBRARY='libpython$(VERSION)$(DEBUG_EXT).a'
 fi
 AC_MSG_RESULT($LIBRARY)
 
@@ -889,6 +900,12 @@ if test "x$enable_profiling" = xyes; then
   LDFLAGS="-pg $LDFLAGS"
 fi
 
+case $CC in
+  *gcc* | *clang*)
+    BASECFLAGS="$BASECFLAGS -std=gnu17"
+  ;;
+esac
+
 AC_MSG_CHECKING(LDLIBRARY)
 
 # MacOSX framework builds need more magic. LDLIBRARY is the dynamic
@@ -908,6 +925,7 @@ fi
 
 # Other platforms follow
 if test $enable_shared = "yes"; then
+  PY_ENABLE_SHARED=1
   AC_DEFINE(Py_ENABLE_SHARED, 1, [Defined if Python is built as a shared library.])
   case $ac_sys_system in
     BeOS*)
@@ -924,8 +942,8 @@ if test $enable_shared = "yes"; then
 	  INSTSONAME="$LDLIBRARY".$SOVERSION
           ;;
     Linux*|GNU*|NetBSD*|FreeBSD*|DragonFly*|OpenBSD*)
-	  LDLIBRARY='libpython$(VERSION).so'
-	  BLDLIBRARY='-L. -lpython$(VERSION)'
+	  LDLIBRARY='libpython$(VERSION)$(DEBUG_EXT).so'
+	  BLDLIBRARY='-L. -lpython$(VERSION)$(DEBUG_EXT)'
 	  RUNSHARED=LD_LIBRARY_PATH=`pwd`${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 	  case $ac_sys_system in
 	      FreeBSD*)
@@ -968,6 +986,7 @@ if test $enable_shared = "yes"; then
 
   esac
 else # shared is disabled
+  PY_ENABLE_SHARED=0
   case $ac_sys_system in
     CYGWIN*)
           BLDLIBRARY='$(LIBRARY)'
@@ -975,6 +994,7 @@ else # shared is disabled
           ;;
   esac
 fi
+AC_SUBST(PY_ENABLE_SHARED)
 
 if test "$cross_compiling" = yes; then
 	RUNSHARED=
@@ -1051,6 +1071,12 @@ else AC_MSG_RESULT(no); Py_DEBUG='false'
 fi],
 [AC_MSG_RESULT(no)])
 
+if test "$Py_DEBUG" = 'true'
+then
+	DEBUG_EXT=_d
+fi
+AC_SUBST(DEBUG_EXT)
+
 # XXX Shouldn't the code above that fiddles with BASECFLAGS and OPT be
 # merged with this chunk of code?
 
@@ -1075,7 +1101,7 @@ then
 	    STRICT_PROTO="-Wstrict-prototypes"
 	fi
         # For gcc 4.x we need to use -fwrapv so lets check if its supported
-        if "$CC" -v --help 2>/dev/null |grep -- -fwrapv > /dev/null; then
+        if "$CC" -v --help 2>/dev/null | grep -- -fwrapv >/dev/null; then
            WRAP="-fwrapv"
         fi
 
@@ -1113,7 +1139,7 @@ fi
 
 AC_SUBST(BASECFLAGS)
 
-# The -arch flags for universal builds on OSX
+# The -arch flags for universal builds on macOS
 UNIVERSAL_ARCH_FLAGS=
 AC_SUBST(UNIVERSAL_ARCH_FLAGS)
 
@@ -1210,6 +1236,11 @@ yes)
                LIPO_32BIT_FLAGS="-extract ppc7400 -extract i386"
                ARCH_RUN_32BIT="/usr/bin/arch -i386 -ppc"
                ;;
+            universal2)
+               UNIVERSAL_ARCH_FLAGS="-arch arm64 -arch x86_64"
+               LIPO_32BIT_FLAGS=""
+               ARCH_RUN_32BIT="true"
+		;;
             intel)
                UNIVERSAL_ARCH_FLAGS="-arch i386 -arch x86_64"
                LIPO_32BIT_FLAGS="-extract i386"
@@ -1231,7 +1262,7 @@ yes)
                ARCH_RUN_32BIT="/usr/bin/arch -i386 -ppc"
                ;;
             *)
-               AC_MSG_ERROR([proper usage is --with-universal-arch=32-bit|64-bit|all|intel|3-way])
+               AC_MSG_ERROR([proper usage is --with-universal-arch=universal2|32-bit|64-bit|all|intel|3-way])
                ;;
             esac
 
@@ -1439,6 +1470,15 @@ if test "$Py_OPT" = 'true' ; then
   DEF_MAKE_ALL_RULE="profile-opt"
   REQUIRE_PGO="yes"
   DEF_MAKE_RULE="build_all"
+  case $CC in
+    *gcc*)
+      # https://developers.redhat.com/blog/2020/06/25/red-hat-enterprise-linux-8-2-brings-faster-python-3-8-run-speeds
+      if "$CC" -v --help 2>/dev/null | grep -- -fsemantic-interposition >/dev/null; then
+        OPT="$OPT -fno-semantic-interposition"
+        LDFLAGS="$LDFLAGS -fno-semantic-interposition"
+      fi
+      ;;
+  esac
 else
   DEF_MAKE_ALL_RULE="build_all"
   REQUIRE_PGO="no"
@@ -1464,15 +1504,16 @@ if test "$Py_LTO" = 'true' ; then
   case $CC in
     *clang*)
       # Any changes made here should be reflected in the GCC+Darwin case below
-      LTOFLAGS="-flto"
+      LTOFLAGS="-flto=thin"
       ;;
     *gcc*)
       case $ac_sys_system in
         Darwin*)
-          LTOFLAGS="-flto"
+          LTOFLAGS="-flto=thin"
           ;;
         *)
-          LTOFLAGS="-flto -fuse-linker-plugin -ffat-lto-objects -flto-partition=none"
+          # "-flto=auto" was introduced in GCC-10
+          LTOFLAGS="-flto=auto"
           ;;
       esac
       ;;
@@ -1484,6 +1525,9 @@ if test "$Py_LTO" = 'true' ; then
       # to get debug symbols.
       LTOFLAGS="$LTOFLAGS -g"
   fi
+
+  # LTO expects optimisation flags in LDFLAGS
+  LDFLAGS="${LDFLAGS} ${CFLAGS} ${OPT}"
 fi
 
 
@@ -1567,7 +1611,8 @@ case $CC in
         ;;
       *)
         PGO_PROF_GEN_FLAG="-fprofile-generate"
-        PGO_PROF_USE_FLAG="-fprofile-use -fprofile-correction"
+        # "-fprofile-partial-training" was introduced in GCC-10.1
+        PGO_PROF_USE_FLAG="-fprofile-use -fprofile-correction -fprofile-partial-training"
         LLVM_PROF_MERGER="true"
         LLVM_PROF_FILE=""
         ;;
@@ -1749,7 +1794,6 @@ dnl ]], [[;]])],[cpp_type=ansi],[AC_DEFINE(HAVE_OLD_CPP) cpp_type=traditional])
 dnl AC_MSG_RESULT($cpp_type)
 
 # checks for header files
-AC_HEADER_STDC
 AC_CHECK_HEADERS(asm/types.h crypt.h conio.h direct.h dlfcn.h errno.h \
 fcntl.h grp.h \
 ieeefp.h io.h langinfo.h libintl.h poll.h process.h pthread.h \
@@ -2077,7 +2121,7 @@ case $ac_sys_system/$ac_sys_release in
     		MACOSX_DEFAULT_ARCH="ppc" 
     		;;
     	*)
-    		AC_MSG_ERROR([Unexpected output of 'arch' on OSX])
+    		AC_MSG_ERROR([Unexpected output of 'arch' on macOS])
     		;;
     	esac
     else
@@ -2087,9 +2131,12 @@ case $ac_sys_system/$ac_sys_release in
     		;;
     	ppc) 
     		MACOSX_DEFAULT_ARCH="ppc64" 
+		;;
+    	arm64)
+    		MACOSX_DEFAULT_ARCH="arm64"
     		;;
     	*)
-    		AC_MSG_ERROR([Unexpected output of 'arch' on OSX])
+    		AC_MSG_ERROR([Unexpected output of 'arch' on macOS])
     		;;
     	esac
 
@@ -2152,7 +2199,7 @@ then
 		esac
 		;;
 	CYGWIN*)   SO=.dll;;
-	*)	   SO=.so;;
+	*)	   SO=$DEBUG_EXT.so;;
 	esac
 else
 	# this might also be a termcap variable, see #610332
@@ -2263,8 +2310,8 @@ then
 		fi
 		;;
 	Linux*|GNU*|QNX*)
-		LDSHARED='$(CC) -shared'
-		LDCXXSHARED='$(CXX) -shared';;
+		LDSHARED='$(CC) -shared -Wl,-O1 -Wl,-Bsymbolic-functions'
+		LDCXXSHARED='$(CXX) -shared -Wl,-O1 -Wl,-Bsymbolic-functions';;
 	BSD/OS*/4*)
 		LDSHARED="gcc -shared"
 		LDCXXSHARED="g++ -shared";;
@@ -2366,7 +2413,7 @@ then
 	    LINKFORSHARED="-Wl,-E -Wl,+s";;
 #	    LINKFORSHARED="-Wl,-E -Wl,+s -Wl,+b\$(BINLIBDEST)/lib-dynload";;
 	BSD/OS/4*) LINKFORSHARED="-Xlinker -export-dynamic";;
-	Linux*|GNU*) LINKFORSHARED="-Xlinker -export-dynamic";;
+	Linux*|GNU*) LINKFORSHARED="-Xlinker -export-dynamic -Wl,-O1 -Wl,-Bsymbolic-functions";;
 	# -u libsys_s pulls in all symbols in libsys
 	Darwin/*) 
 		# -u _PyMac_Error is needed to pull in the mac toolbox glue,
@@ -2557,6 +2604,15 @@ else
   TCLTK_INCLUDES="$with_tcltk_includes"
   TCLTK_LIBS="$with_tcltk_libs"
 fi
+
+# Check for support for loadable sqlite extensions
+AC_MSG_CHECKING(for --enable-loadable-sqlite-extensions)
+AC_ARG_ENABLE(loadable-sqlite-extensions,
+              AS_HELP_STRING([--enable-loadable-sqlite-extensions], [support loadable extensions in _sqlite module]),
+              [],
+              [enable_loadable_sqlite_extensions="no"])
+
+AC_MSG_RESULT($enable_loadable_sqlite_extensions)
 
 # Check for --with-dbmliborder
 AC_MSG_CHECKING(for --with-dbmliborder)
@@ -2814,11 +2870,12 @@ if test "$posix_threads" = "yes"; then
       AC_CACHE_VAL(ac_cv_pthread_system_supported,
       [AC_RUN_IFELSE([AC_LANG_SOURCE([[
       #include <stdio.h>
+      #include <stdlib.h>
       #include <pthread.h>
       void *foo(void *parm) {
         return NULL;
       }
-      main() {
+      int main() {
         pthread_attr_t attr;
         pthread_t id;
         if (pthread_attr_init(&attr)) exit(-1);
@@ -3146,21 +3203,24 @@ AC_MSG_RESULT(MACHDEP_OBJS)
 
 # checks for library functions
 AC_CHECK_FUNCS(alarm setitimer getitimer chown \
- clock confstr ctermid execv fchmod fchown fork fpathconf ftime ftruncate \
+ clock confstr ctermid execv faccessat fchmod fchmodat fchown fchownat fork \
+ fpathconf fstatat ftime ftruncate futimesat \
  gai_strerror getgroups getlogin getloadavg getpeername getpgid getpid \
  getentropy \
  getpriority getresuid getresgid getpwent getspnam getspent getsid getwd \
- initgroups kill killpg lchown lstat mkfifo mknod mktime mmap \
- mremap nice pathconf pause plock poll pthread_init \
- putenv readlink realpath \
+ initgroups kill killpg lchmod lchown linkat lstat mkdirat mkfifo \
+ mkfifoat mknod mknodat mktime mmap \
+ mremap nice openat pathconf pause pipe2 plock poll pthread_init \
+ putenv readlink readlinkat realpath renameat \
  select sem_open sem_timedwait sem_getvalue sem_unlink setegid seteuid \
  setgid \
  setlocale setregid setreuid setsid setpgid setpgrp setuid setvbuf snprintf \
  setlocale setregid setreuid setresuid setresgid \
  setsid setpgid setpgrp setuid setvbuf snprintf \
- sigaction siginterrupt sigrelse strftime \
+ sigaction siginterrupt sigrelse strftime symlinkat \
  sysconf tcgetpgrp tcsetpgrp tempnam timegm times tmpfile tmpnam tmpnam_r \
- truncate uname unsetenv utimes waitpid wait3 wait4 wcscoll _getpty)
+ truncate uname unlinkat unsetenv utimensat utimes waitpid wait3 wait4 \
+ wcscoll _getpty)
 
 # Force lchmod off for Linux. Linux disallows changing the mode of symbolic
 # links. Some libc implementations have a stub lchmod implementation that always
@@ -3222,6 +3282,13 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
    AC_MSG_RESULT(yes)],
   [AC_MSG_RESULT(no)
 ])
+AC_MSG_CHECKING(for _dyld_shared_cache_contains_path)
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <mach-o/dyld.h>]], [[void *x=_dyld_shared_cache_contains_path]])],
+  [AC_DEFINE(HAVE_DYLD_SHARED_CACHE_CONTAINS_PATH, 1, Define if you have the '_dyld_shared_cache_contains_path' function.)
+   AC_MSG_RESULT(yes)],
+  [AC_MSG_RESULT(no)
+])
+
 # On some systems (eg. FreeBSD 5), we would find a definition of the
 # functions ctermid_r, setgroups in the library, but no prototype
 # (e.g. because we use _XOPEN_SOURCE). See whether we can take their
@@ -3443,6 +3510,27 @@ AC_CHECK_FUNCS(gettimeofday,
     ])
 )
 
+AC_CHECK_FUNCS(clock_gettime, [], [
+    AC_CHECK_LIB(rt, clock_gettime, [
+        LIBS="$LIBS -lrt"
+        AC_DEFINE(HAVE_CLOCK_GETTIME, 1)
+        AC_DEFINE(TIMEMODULE_LIB, [rt],
+                  [Library needed by timemodule.c: librt may be needed for clock_gettime()])
+    ])
+])
+
+AC_CHECK_FUNCS(clock_getres, [], [
+    AC_CHECK_LIB(rt, clock_getres, [
+        AC_DEFINE(HAVE_CLOCK_GETRES, 1)
+    ])
+])
+
+AC_CHECK_FUNCS(clock_settime, [], [
+    AC_CHECK_LIB(rt, clock_settime, [
+        AC_DEFINE(HAVE_CLOCK_SETTIME, 1)
+    ])
+])
+
 AC_MSG_CHECKING(for major, minor, and makedev)
 AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #if defined(MAJOR_IN_MKDEV)
@@ -3595,7 +3683,6 @@ fi
 AC_CHECK_FUNCS(getnameinfo)
 
 # checks for structures
-AC_HEADER_TIME
 AC_STRUCT_TM
 AC_STRUCT_TIMEZONE
 AC_CHECK_MEMBERS([struct stat.st_rdev])
@@ -4081,6 +4168,11 @@ int main(void) {
 [ac_cv_posix_semaphores_enabled=no],
 [ac_cv_posix_semaphores_enabled=yes])
 )
+case $ac_sys_system in
+  Linux*)
+    # assume enabled, see https://launchpad.net/bugs/630511
+    ac_cv_posix_semaphores_enabled=yes
+esac
 AC_MSG_RESULT($ac_cv_posix_semaphores_enabled)
 if test $ac_cv_posix_semaphores_enabled = no
 then
@@ -4117,6 +4209,11 @@ int main(void){
 [ac_cv_broken_sem_getvalue=yes],
 [ac_cv_broken_sem_getvalue=yes])
 )
+case $ac_sys_system in
+  Linux*)
+    # assume enabled, see https://launchpad.net/bugs/630511
+    ac_cv_broken_sem_getvalue=no
+esac
 AC_MSG_RESULT($ac_cv_broken_sem_getvalue)
 if test $ac_cv_broken_sem_getvalue = yes
 then
@@ -4177,6 +4274,7 @@ then
   AC_MSG_CHECKING(whether wchar_t is signed)
   AC_CACHE_VAL(ac_cv_wchar_t_signed, [
   AC_RUN_IFELSE([AC_LANG_SOURCE([[
+  #include <stdlib.h>
   #include <wchar.h>
   int main()
   {
@@ -4266,6 +4364,7 @@ AC_C_BIGENDIAN
 AC_MSG_CHECKING(whether right shift extends the sign bit)
 AC_CACHE_VAL(ac_cv_rshift_extends_sign, [
 AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <stdlib.h>
 int main()
 {
 	exit(((-1)>>3 == -1) ? 0 : 1);
@@ -4416,6 +4515,7 @@ AC_MSG_CHECKING(for broken poll())
 AC_CACHE_VAL(ac_cv_broken_poll,
 AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <poll.h>
+#include <unistd.h>
 
 int main()
 {
@@ -4554,7 +4654,7 @@ fi
 
 # first curses configure check
 ac_save_cppflags="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS -I/usr/include/ncursesw"
+CPPFLAGS="$CPPFLAGS `$PKG_CONFIG --cflags ncursesw`"
 
 AC_CHECK_HEADERS(curses.h ncurses.h)
 
@@ -4961,7 +5061,7 @@ AC_MSG_RESULT($ENSUREPIP)
 AC_SUBST(ENSUREPIP)
 
 # generate output files
-AC_CONFIG_FILES(Makefile.pre Modules/Setup.config Misc/python.pc)
+AC_CONFIG_FILES(Makefile.pre Modules/Setup.config Misc/python.pc Misc/python-config.sh)
 AC_CONFIG_FILES([Modules/ld_so_aix], [chmod +x Modules/ld_so_aix])
 AC_OUTPUT
 
@@ -4999,7 +5099,7 @@ if test "$Py_OPT" = 'false' -a "$Py_DEBUG" != 'true'; then
     echo "" >&AS_MESSAGE_FD
     echo "" >&AS_MESSAGE_FD
     echo "If you want a release build with all optimizations active (LTO, PGO, etc),"
-    echo "please run ./configure --enable-optimizations" >&AS_MESSAGE_FD
+    echo "please run ./configure --enable-optimizations --with-lto" >&AS_MESSAGE_FD
     echo "" >&AS_MESSAGE_FD
     echo "" >&AS_MESSAGE_FD
 fi

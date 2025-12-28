@@ -44,7 +44,7 @@ for opt in opt_flags:
         print ' '.join(flags)
 
     elif opt in ('--libs', '--ldflags'):
-        libs = ['-lpython' + pyver]
+        libs = ['-lpython' + pyver + (sys.pydebug and "_d" or "")]
         libs += getvar('LIBS').split()
         libs += getvar('SYSLIBS').split()
         # add the prefix/lib/pythonX.Y/config dir, but only if there is no
@@ -56,3 +56,11 @@ for opt in opt_flags:
                 libs.extend(getvar('LINKFORSHARED').split())
         print ' '.join(libs)
 
+    elif opt == '--extension-suffix':
+        print sysconfig.get_config_var('SO')
+
+    elif opt == '--abiflags':
+        print ''
+
+    elif opt == '--configdir':
+        print sysconfig.get_config_var('LIBPL')
