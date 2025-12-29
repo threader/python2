@@ -1,0 +1,44 @@
+# DP: Disable ensurepip in Debian for now.
+
+Index: b/Lib/ensurepip/__init__.py
+===================================================================
+--- a/Lib/ensurepip/__init__.py
++++ b/Lib/ensurepip/__init__.py
+@@ -12,6 +12,21 @@ import tempfile
+ 
+ __all__ = ["version", "bootstrap"]
+ 
++def _ensurepip_is_disabled_in_debian():
++    if True:
++        print ('''\
++ensurepip is disabled in Debian/Ubuntu for the system python.
++
++Python modules For the system python are usually handled by dpkg and apt-get.
++
++    apt-get install python-<module name>
++
++Install the python-pip package to use pip itself.  Using pip together
++with the system python might have unexpected results for any system installed
++module, so use it on your own risk, or make sure to only use it in virtual
++environments.
++''')
++        sys.exit(1)
+ 
+ _PROJECTS = [
+     ("setuptools"),
+@@ -33,6 +48,7 @@ def version():
+     """
+     Returns a string specifying the bundled version of pip.
+     """
++    _ensurepip_is_disabled_in_debian()
+     whl_name = 'pip'
+     wheel_names = glob.glob('/usr/share/python-wheels/%s-*.whl' % whl_name)
+     if len(wheel_names) == 1:
+@@ -76,6 +92,7 @@ def _bootstrap(root=None, upgrade=False,
+ 
+     Note that calling this function will alter both sys.path and os.environ.
+     """
++    _ensurepip_is_disabled_in_debian()
+     if altinstall and default_pip:
+         raise ValueError("Cannot use altinstall and default_pip together")
+ 

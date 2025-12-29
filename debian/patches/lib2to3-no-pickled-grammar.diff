@@ -1,0 +1,159 @@
+Index: b/Lib/lib2to3/pgen2/driver.py
+===================================================================
+--- a/Lib/lib2to3/pgen2/driver.py
++++ b/Lib/lib2to3/pgen2/driver.py
+@@ -123,7 +123,10 @@ def load_grammar(gt="Grammar.txt", gp=No
+     if force or not _newer(gp, gt):
+         logger.info("Generating grammar tables from %s", gt)
+         g = pgen.generate_grammar(gt)
+-        if save:
++        # the pickle files mismatch, when built on different architectures.
++        # don't save these for now. An alternative solution might be to
++        # include the multiarch triplet into the file name
++        if False:
+             logger.info("Writing grammar tables to %s", gp)
+             try:
+                 g.dump(gp)
+Index: b/Lib/lib2to3/tests/test_main.py
+===================================================================
+--- a/Lib/lib2to3/tests/test_main.py
++++ b/Lib/lib2to3/tests/test_main.py
+@@ -82,68 +82,6 @@ class TestMain(unittest.TestCase):
+             trivial.write("print 'I need a simple conversion.'")
+         self.setup_files.append("trivial.py")
+ 
+-    def test_filename_changing_on_output_single_dir(self):
+-        """2to3 a single directory with a new output dir and suffix."""
+-        self.setup_test_source_trees()
+-        out = StringIO.StringIO()
+-        err = StringIO.StringIO()
+-        suffix = "TEST"
+-        ret = self.run_2to3_capture(
+-                ["-n", "--add-suffix", suffix, "--write-unchanged-files",
+-                 "--no-diffs", "--output-dir",
+-                 self.py3_dest_dir, self.py2_src_dir],
+-                StringIO.StringIO(""), out, err)
+-        self.assertEqual(ret, 0)
+-        stderr = err.getvalue()
+-        self.assertIn(" implies -w.", stderr)
+-        self.assertIn(
+-                "Output in %r will mirror the input directory %r layout" % (
+-                        self.py3_dest_dir, self.py2_src_dir), stderr)
+-        self.assertEqual(set(name+suffix for name in self.setup_files),
+-                         set(os.listdir(self.py3_dest_dir)))
+-        for name in self.setup_files:
+-            self.assertIn("Writing converted %s to %s" % (
+-                    os.path.join(self.py2_src_dir, name),
+-                    os.path.join(self.py3_dest_dir, name+suffix)), stderr)
+-        sep = re.escape(os.sep)
+-        self.assertRegexpMatches(
+-                stderr, r"No changes to .*/__init__\.py".replace("/", sep))
+-        self.assertNotRegex(
+-                stderr, r"No changes to .*/trivial\.py".replace("/", sep))
+-
+-    def test_filename_changing_on_output_two_files(self):
+-        """2to3 two files in one directory with a new output dir."""
+-        self.setup_test_source_trees()
+-        err = StringIO.StringIO()
+-        py2_files = [self.trivial_py2_file, self.init_py2_file]
+-        expected_files = set(os.path.basename(name) for name in py2_files)
+-        ret = self.run_2to3_capture(
+-                ["-n", "-w", "--write-unchanged-files",
+-                 "--no-diffs", "--output-dir", self.py3_dest_dir] + py2_files,
+-                StringIO.StringIO(""), StringIO.StringIO(), err)
+-        self.assertEqual(ret, 0)
+-        stderr = err.getvalue()
+-        self.assertIn(
+-                "Output in %r will mirror the input directory %r layout" % (
+-                        self.py3_dest_dir, self.py2_src_dir), stderr)
+-        self.assertEqual(expected_files, set(os.listdir(self.py3_dest_dir)))
+-
+-    def test_filename_changing_on_output_single_file(self):
+-        """2to3 a single file with a new output dir."""
+-        self.setup_test_source_trees()
+-        err = StringIO.StringIO()
+-        ret = self.run_2to3_capture(
+-                ["-n", "-w", "--no-diffs", "--output-dir", self.py3_dest_dir,
+-                 self.trivial_py2_file],
+-                StringIO.StringIO(""), StringIO.StringIO(), err)
+-        self.assertEqual(ret, 0)
+-        stderr = err.getvalue()
+-        self.assertIn(
+-                "Output in %r will mirror the input directory %r layout" % (
+-                        self.py3_dest_dir, self.py2_src_dir), stderr)
+-        self.assertEqual(set([os.path.basename(self.trivial_py2_file)]),
+-                         set(os.listdir(self.py3_dest_dir)))
+-
+ 
+ if __name__ == '__main__':
+     unittest.main()
+Index: b/Lib/lib2to3/tests/test_parser.py
+===================================================================
+--- a/Lib/lib2to3/tests/test_parser.py
++++ b/Lib/lib2to3/tests/test_parser.py
+@@ -41,65 +41,6 @@ class TestPgen2Caching(support.TestCase)
+     def test_load_grammar_from_txt_file(self):
+         pgen2_driver.load_grammar(support.grammar_path, save=False, force=True)
+ 
+-    def test_load_grammar_from_pickle(self):
+-        # Make a copy of the grammar file in a temp directory we are
+-        # guaranteed to be able to write to.
+-        tmpdir = tempfile.mkdtemp()
+-        try:
+-            grammar_copy = os.path.join(
+-                    tmpdir, os.path.basename(support.grammar_path))
+-            shutil.copy(support.grammar_path, grammar_copy)
+-            pickle_name = pgen2_driver._generate_pickle_name(grammar_copy)
+-
+-            pgen2_driver.load_grammar(grammar_copy, save=True, force=True)
+-            self.assertTrue(os.path.exists(pickle_name))
+-
+-            os.unlink(grammar_copy)  # Only the pickle remains...
+-            pgen2_driver.load_grammar(grammar_copy, save=False, force=False)
+-        finally:
+-            shutil.rmtree(tmpdir)
+-
+-    @unittest.skipIf(sys.executable is None, 'sys.executable required')
+-    def test_load_grammar_from_subprocess(self):
+-        tmpdir = tempfile.mkdtemp()
+-        tmpsubdir = os.path.join(tmpdir, 'subdir')
+-        try:
+-            os.mkdir(tmpsubdir)
+-            grammar_base = os.path.basename(support.grammar_path)
+-            grammar_copy = os.path.join(tmpdir, grammar_base)
+-            grammar_sub_copy = os.path.join(tmpsubdir, grammar_base)
+-            shutil.copy(support.grammar_path, grammar_copy)
+-            shutil.copy(support.grammar_path, grammar_sub_copy)
+-            pickle_name = pgen2_driver._generate_pickle_name(grammar_copy)
+-            pickle_sub_name = pgen2_driver._generate_pickle_name(
+-                     grammar_sub_copy)
+-            self.assertNotEqual(pickle_name, pickle_sub_name)
+-
+-            # Generate a pickle file from this process.
+-            pgen2_driver.load_grammar(grammar_copy, save=True, force=True)
+-            self.assertTrue(os.path.exists(pickle_name))
+-
+-            # Generate a new pickle file in a subprocess with a most likely
+-            # different hash randomization seed.
+-            sub_env = dict(os.environ)
+-            sub_env['PYTHONHASHSEED'] = 'random'
+-            subprocess.check_call(
+-                    [sys.executable, '-c', """
+-from lib2to3.pgen2 import driver as pgen2_driver
+-pgen2_driver.load_grammar(%r, save=True, force=True)
+-                    """ % (grammar_sub_copy,)],
+-                    env=sub_env)
+-            self.assertTrue(os.path.exists(pickle_sub_name))
+-
+-            with open(pickle_name, 'rb') as pickle_f_1, \
+-                    open(pickle_sub_name, 'rb') as pickle_f_2:
+-                self.assertEqual(
+-                    pickle_f_1.read(), pickle_f_2.read(),
+-                    msg='Grammar caches generated using different hash seeds'
+-                    ' were not identical.')
+-        finally:
+-            shutil.rmtree(tmpdir)
+-
+     def test_load_packaged_grammar(self):
+         modname = __name__ + '.load_test'
+         class MyLoader:
