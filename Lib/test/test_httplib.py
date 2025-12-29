@@ -385,6 +385,51 @@ class HeaderTests(TestCase):
                 conn.putheader(name, value)
 
 
+class HttpMethodTests(TestCase):
+    def test_invalid_method_names(self):
+        methods = (
+            'GET\r',
+            'POST\n',
+            'PUT\n\r',
+            'POST\nValue',
+            'POST\nHOST:abc',
+            'GET\nrHost:abc\n',
+            'POST\rRemainder:\r',
+            'GET\rHOST:\n',
+            '\nPUT'
+        )
+
+        for method in methods:
+            with self.assertRaisesRegexp(
+                    ValueError, "method can't contain control characters"):
+                conn = httplib.HTTPConnection('example.com')
+                conn.sock = FakeSocket(None)
+                conn.request(method=method, url="/")
+
+
+class HttpMethodTests(TestCase):
+    def test_invalid_method_names(self):
+        methods = (
+            'GET\r',
+            'POST\n',
+            'PUT\n\r',
+            'POST\nValue',
+            'POST\nHOST:abc',
+            'GET\nrHost:abc\n',
+            'POST\rRemainder:\r',
+            'GET\rHOST:\n',
+            '\nPUT'
+        )
+
+        for method in methods:
+            with self.assertRaisesRegexp(
+                    ValueError, "method can't contain control characters"):
+                conn = httplib.HTTPConnection('example.com')
+                conn.sock = FakeSocket(None)
+                conn.request(method=method, url="/")
+
+
+
 class BasicTest(TestCase):
     def test_status_lines(self):
         # Test HTTP status lines
@@ -654,6 +699,14 @@ class BasicTest(TestCase):
         )
         resp = httplib.HTTPResponse(FakeSocket(body))
         self.assertRaises(httplib.LineTooLong, resp.begin)
+
+    def test_overflowing_header_limit_after_100(self):
+        body = (
+            'HTTP/1.1 100 OK\r\n'
+            'r\n' * 32768
+        )
+        resp = httplib.HTTPResponse(FakeSocket(body))
+        self.assertRaises(httplib.HTTPException, resp.begin)
 
     def test_overflowing_chunked_line(self):
         body = (
@@ -1010,6 +1063,7 @@ class TunnelTests(TestCase):
 @test_support.reap_threads
 def test_main(verbose=None):
     test_support.run_unittest(HeaderTests, OfflineTest, BasicTest, TimeoutTest,
+                              HttpMethodTests,
                               HTTPTest, HTTPSTest, SourceAddressTest,
                               TunnelTests)
 

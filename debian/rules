@@ -357,7 +357,8 @@ common_configure_args = \
 		--with-dbmliborder=bdb:gdbm \
 		--with-system-expat \
 		--with-computed-gotos \
-		--enable-optimizations --with-lto
+		--enable-optimizations
+# --with-lto
 
 ifneq (,$(filter $(DEB_HOST_ARCH), avr32 or1k))
   common_configure_args += --without-ffi
