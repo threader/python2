@@ -1,0 +1,13 @@
+Index: b/Lib/idlelib/macosxSupport.py
+===================================================================
+--- a/Lib/idlelib/macosxSupport.py
++++ b/Lib/idlelib/macosxSupport.py
+@@ -18,7 +18,7 @@ def isCarbonAquaTk(root):
+                         DeprecationWarning, stacklevel=2)
+     return isCarbonTk()
+ 
+-_tk_type = None
++_tk_type = "other"
+ 
+ def _initializeTkVariantTests(root):
+     """

@@ -1,0 +1,26 @@
+# this is conditional in the rules file
+python2.7 source: debhelper-script-needs-versioned-build-depends dh_icons (>= 5.0.51~)
+
+# generated during the build
+python2.7 source: quilt-build-dep-but-no-series-file
+
+# doesn't support any newer versions
+python2.7 source: build-depends-on-versioned-berkeley-db
+
+# using the system libffi
+python2.7 source: outdated-autotools-helper-file
+
+# patches are applied conditionally
+python2.7 source: patch-file-present-but-not-mentioned-in-series
+
+# this source package provides these packages so it cannot depend on them
+python-defaults source: dbg-package-missing-depends python-all-dbg
+python-defaults source: dbg-package-missing-depends python-dbg
+python-defaults source: dbg-package-missing-depends libpython-all-dbg
+python-defaults source: dbg-package-missing-depends libpython-dbg
+
+# it's upstream software, just splitted out.
+python-defaults source: native-package-with-dash-version
+
+# yes, that's going to be away as the second-last package ...
+python-defaults source: python-foo-but-no-python3-foo

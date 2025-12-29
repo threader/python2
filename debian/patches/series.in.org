@@ -1,0 +1,94 @@
+# git-updates.diff
+issue9189.diff
+build-libpython.diff
+deb-setup.diff
+deb-locations.diff
+site-locations.diff
+distutils-install-layout.diff
+locale-module.diff
+distutils-link.diff
+distutils-sysconfig.diff
+test-sundry.diff
+tkinter-import.diff
+link-opt.diff
+debug-build.diff
+hotshot-import.diff
+no-zip-on-sys.path.diff
+platform-lsbrelease.diff
+bdist-wininst-notfound.diff
+setup-modules-ssl.diff
+makesetup-bashism.diff
+hurd-disable-nonworking-constants.diff
+#ifdef WITH_FPECTL
+enable-fpectl.diff
+#endif
+statvfs-f_flag-constants.diff
+#if defined (arch_alpha)
+plat-linux2_alpha.diff
+#elif defined (arch_hppa)
+plat-linux2_hppa.diff
+#elif defined (arch_mips) || defined(arch_mipsel) || defined(arch_mipsn32) || defined(arch_mipsn32el) || defined (arch_mips64) || defined(arch_mips64el) \
+   || defined(arch_mipsr6) || defined(arch_mipsr6el) || defined(arch_mipsn32r6) || defined(arch_mipsn32r6el) || defined(arch_mips64r6) || defined(arch_mips64r6el)
+plat-linux2_mips.diff
+#elif defined (arch_sparc) || defined (arch_sparc64)
+plat-linux2_sparc.diff
+#endif
+#if defined (BROKEN_UTIMES)
+disable-utimes.diff
+#endif
+#if defined (Ubuntu)
+langpack-gettext.diff
+#endif
+#if defined (arch_os_hurd)
+no-large-file-support.diff
+cthreads.diff
+#endif
+issue9012a.diff
+link-system-expat.diff
+plat-gnukfreebsd.diff
+link-whole-archive.diff
+bsddb-libpath.diff
+disable-sem-check.diff
+ctypes-arm.diff
+lto-link-flags.diff
+multiarch.diff
+lib2to3-no-pickled-grammar.diff
+add-python-config-sh.diff
+ext-no-libpython-link.diff
+build-hash.diff
+libffi-shared.diff
+atomic-pyc-rename.diff
+revert-unittest-loader-symlinks19352.diff
+enable-sqlite-loadext.diff
+installed-testsuite.diff
+ensurepip-wheels.diff
+ensurepip-disabled.diff
+mangle-fstack-protector.diff
+reproducible-buildinfo.diff
+pydoc-use-pager.diff
+issue27239.diff
+rename-md5-init.diff
+local-doc-references.diff
+m-i-p-s-r6.diff
+multiarch-libc.diff
+end-of-life.diff
+CVE-2019-20907.diff
+CVE-2020-8492.diff
+CVE-2021-3177.diff
+ testsuite-fix-with-expat.diff
+CVE-2021-23336.diff
+CVE-2022-0391.diff
+CVE-2022-48560.diff
+CVE-2022-48565.diff
+CVE-2022-48566.diff
+CVE-2023-24329.diff
+CVE-2023-40217.diff
+openssl3-compatibility.diff
+openssl3-data.diff
+openssl3-unexpected-eof.diff
+openssl3-load-verify-error.diff
+openssl3-version.diff
+openssl3-tests-tlsv1.diff
+sphinx4.diff
+skip-tls1.2-tests.diff
+issue46811.diff

@@ -1,0 +1,25 @@
+# git-updates.diff
+#ifdef WITH_FPECTL
+enable-fpectl.diff
+#endif
+statvfs-f_flag-constants.diff
+#if defined (arch_alpha)
+plat-linux2_alpha.diff
+#elif defined (arch_hppa)
+plat-linux2_hppa.diff
+#elif defined (arch_mips) || defined(arch_mipsel) || defined(arch_mipsn32) || defined(arch_mipsn32el) || defined (arch_mips64) || defined(arch_mips64el) \
+   || defined(arch_mipsr6) || defined(arch_mipsr6el) || defined(arch_mipsn32r6) || defined(arch_mipsn32r6el) || defined(arch_mips64r6) || defined(arch_mips64r6el)
+plat-linux2_mips.diff
+#elif defined (arch_sparc) || defined (arch_sparc64)
+plat-linux2_sparc.diff
+#endif
+#if defined (BROKEN_UTIMES)
+disable-utimes.diff
+#endif
+#if defined (Ubuntu)
+langpack-gettext.diff
+#endif
+#if defined (arch_os_hurd)
+no-large-file-support.diff
+cthreads.diff
+#endif
