@@ -219,24 +219,3 @@ Description: Debug Build of the Python Interpreter (version @VER@)
  This package is a dependency package, which depends on Debian's Python2
  version (currently v@VER@).
 
-Package: python2-dbg
-Architecture: any
-Multi-Arch: allowed
-Section: debug
-Depends: ${misc:Depends}, python2 (= ${binary:Version}), libpython2-dbg (= ${binary:Version}), python@VER@-dbg (>= @PREVVER@)
-Breaks: python2-dbg (<< 2.7.15-2)
-Replaces: python2-dbg (<< 2.7.15-2)
-Description: debug build of the Python2 interpreter (version @VER@)
- Python2 interpreter configured with --pydebug. Dynamically loaded modules are
- searched in /usr/lib/python@VER@/lib-dynload/debug first.
-
-Package: libpython2-dbg
-Architecture: any
-Multi-Arch: same
-Section: debug
-Depends: lib@PVER@-dbg (>= @PREVVER@), ${misc:Depends}
-Breaks: libpython-dbg (<< 2.7.15-2)
-Replaces: libpython-dbg (<< 2.7.15-2)
-Description: debug build of the Python2 interpreter (version @VER@)
- Python2 interpreter configured with --pydebug. Dynamically loaded modules
- are searched in /usr/lib/python@VER@/lib-dynload/debug first.
