@@ -2878,10 +2878,10 @@ if test "$posix_threads" = "yes"; then
       int main() {
         pthread_attr_t attr;
         pthread_t id;
-        if (pthread_attr_init(&attr)) exit(-1);
-        if (pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM)) exit(-1);
-        if (pthread_create(&id, &attr, foo, NULL)) exit(-1);
-        exit(0);
+        if (pthread_attr_init(&attr)) return (-1);
+        if (pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM)) return (-1);
+        if (pthread_create(&id, &attr, foo, NULL)) return (-1);
+        return (0);
       }]])],
       [ac_cv_pthread_system_supported=yes],
       [ac_cv_pthread_system_supported=no],
@@ -3098,6 +3098,30 @@ if test "$withval" != no
 then 
   AC_DEFINE(WITH_TSC, 1, 
     [Define to profile with the Pentium timestamp counter]) 
+    AC_MSG_RESULT(yes)
+else AC_MSG_RESULT(no)
+fi],
+[AC_MSG_RESULT(no)])
+
+AC_MSG_CHECKING(for --with-count-allocs)
+AC_ARG_WITH(count-allocs,
+[  --with(out)count-allocs  enable/disable per-type instance accounting], [
+if test "$withval" != no
+then 
+  AC_DEFINE(COUNT_ALLOCS, 1,
+    [Define to keep records of the number of instances of each type]) 
+    AC_MSG_RESULT(yes)
+else AC_MSG_RESULT(no)
+fi],
+[AC_MSG_RESULT(no)])
+
+AC_MSG_CHECKING(for --with-call-profile)
+AC_ARG_WITH(call-profile,
+[  --with(out)-call-profile  enable/disable statistics on function call invocation], [
+if test "$withval" != no
+then 
+  AC_DEFINE(CALL_PROFILE, 1, 
+    [Define to keep records on function call invocation]) 
     AC_MSG_RESULT(yes)
 else AC_MSG_RESULT(no)
 fi],
@@ -4279,7 +4303,7 @@ then
   int main()
   {
 	/* Success: exit code 0 */
-        exit((((wchar_t) -1) < ((wchar_t) 0)) ? 0 : 1);
+        return ((((wchar_t) -1) < ((wchar_t) 0)) ? 0 : 1);
   }
   ]])],
   [ac_cv_wchar_t_signed=yes],
@@ -4367,7 +4391,7 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdlib.h>
 int main()
 {
-	exit(((-1)>>3 == -1) ? 0 : 1);
+	return (((-1)>>3 == -1) ? 0 : 1);
 }
 ]])],
 [ac_cv_rshift_extends_sign=yes],
