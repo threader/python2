@@ -1100,7 +1100,7 @@ endif
 	: # XXX: Some files in upstream Demo and Tools have strange
 	: # exec permissions, make lintian glad:
 	-chmod 644 $(d_tk)/$(scriptdir)/lib-tk/Tix.py
-	-chmod 644 $(d)/$(scriptdir)/runpy.py
+	-chmod 644 $(p_min)/$(scriptdir)/runpy.py
 
 	cd $(d_exam)/usr/share/doc/python$(VER)/examples && chmod 644 \
 	  Demo/{classes/*.py*,comparisons/patterns} \
@@ -1443,14 +1443,19 @@ $(patchdir)/series: $(patchdir)/series.in
 	  $(if $(filter $(with_fpectl),yes),-DWITH_FPECTL) \
 	  -Darch_os_$(DEB_HOST_ARCH_OS) -Darch_$(DEB_HOST_ARCH) \
 	  -o - $(patchdir)/series.in \
-	  | egrep -v '^(#.*|$$)' > $(patchdir)/series
+	  | \
+	if [ -s $$ ]; then \
+	egrep -v '^(#.*|$$)' > $(patchdir)/series;  \
+	fi
 
 patch: stamps/stamp-patch
 stamps/stamp-patch: $(patchdir)/series
 	dh_testdir
 	uname -a
 	@echo USER=$$USER, LOGNAME=$$LOGNAME
-	QUILT_PATCHES=$(patchdir) quilt push -a || test $$? = 2
+	if [-s $(patchdir)/series ]; then \
+	QUILT_PATCHES=$(patchdir) quilt push -a || test $$? = 2; \
+	fi
 	rm -rf autom4te.cache configure
 	autoconf
 	mkdir -p stamps
@@ -1480,7 +1485,9 @@ stamps/stamp-patch: $(patchdir)/series
 
 reverse-patches: unpatch
 unpatch:
-	QUILT_PATCHES=$(patchdir) quilt pop -a -R || test $$? = 2
+	if [ -s $(patchdir)/series ]; then \
+	QUILT_PATCHES=$(patchdir) quilt pop -a -R || test $$? = 2 ;\
+	fi
 	rm -f stamps/stamp-patch $(patchdir)/series
 	rm -rf configure autom4te.cache
 	rm -f Lib/dist-packages
