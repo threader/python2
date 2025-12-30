@@ -955,8 +955,8 @@ endif
 		/$(scriptdir)/plat-$(DEB_HOST_MULTIARCH)/_sysconfigdata_nd.py \
 		$(scriptdir)/site.py \
 		$(shell cd $(d); for i in $(MIN_EXTS); do \
-			test -e $(scriptdir)/lib-dynload/$$i.so \
-			  && echo $(scriptdir)/lib-dynload/$$i.so; \
+			test -e $(scriptdir)/lib-dynload/$$i.$(DEB_HOST_MULTIARCH).so \
+			  && echo $(scriptdir)/lib-dynload/$$i.$(DEB_HOST_MULTIARCH).so; \
 		  done; true)
 
 	: # Move the binary and the minimal libraries into $(p_min).
