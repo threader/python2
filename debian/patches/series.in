@@ -2,7 +2,6 @@
 #ifdef WITH_FPECTL
 enable-fpectl.diff
 #endif
-statvfs-f_flag-constants.diff
 #if defined (arch_alpha)
 plat-linux2_alpha.diff
 #elif defined (arch_hppa)
