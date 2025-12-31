@@ -1,4 +1,3 @@
-# git-updates.diff
 #ifdef WITH_FPECTL
 enable-fpectl.diff
 #endif
