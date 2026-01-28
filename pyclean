@@ -26,7 +26,7 @@ import optparse
 import sys
 from os import environ, remove
 from os.path import exists
-sys.path.insert(1, '/usr/share/python/')
+sys.path.insert(1, '/usr/share/python2/')
 
 from debpython import files as dpf
 from debpython.namespace import add_namespace_files

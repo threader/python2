@@ -1,11 +1,11 @@
 # some macros useful for packaging python packages
 
 # to include it unconditionally:
-# include /usr/share/python/python.mk
+# include /usr/share/python2/python.mk
 #
 # to include it conditionally, and have the packaging working with earlier releases
 # and backports:
-# -include /usr/share/python/python.mk
+# -include /usr/share/python2/python.mk
 # ifeq (,$(py_sitename))
 #   py_sitename = site-packages
 #   py_libdir = /usr/lib/python$(subst python,,$(1))/site-packages
