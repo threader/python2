@@ -31,6 +31,8 @@ Modules/Setup.config
 Modules/Setup.local
 Modules/config.c
 Modules/ld_so_aix
+Modules/_ctypes/libffi/config.guess
+Modules/_ctypes/libffi/config.sub
 PC/python_nt*.h
 PC/pythonnt_rc*.h
 PC/*/*.exe
@@ -70,6 +72,9 @@ build/
 config.cache
 config.log
 config.status
+config.guess
+config.sub
+configure
 libpython*.a
 libpython*.so*
 libpython*.dylib
@@ -99,13 +104,17 @@ configure
 stamps
 build
 build-*
+stamp-*
+debian/idle2
+debian/.debhelper
+debian/*.debhelper.log
+debian/*.substvars
+debian/files
+
 aclocal.m4
 config.guess
 config.sub
-# configure.ac
 install-sh
-# pyconfig.h.in
-# setup.py
 
 debian/.debhelper
 debian/*.debhelper.log
@@ -129,6 +138,40 @@ debian/test_results
 debian/tmp-dbg
 debian/tmp-shdbg
 debian/tmp
+
+debian/libpython-all-dbg
+debian/libpython-all-dev
+debian/libpython-dbg
+debian/libpython-dev
+debian/libpython-stdlib
+debian/python
+debian/python-all
+debian/python-all-dbg
+debian/python-all-dev
+debian/python-dbg
+debian/python-dev
+debian/python-doc
+debian/python-examples
+debian/python-minimal
+
+debian/libpython2-dbg
+debian/libpython2-dev
+debian/libpython2-stdlib
+debian/python2-dbg
+debian/python2-dev
+debian/python2-doc
+debian/python2-minimal
+debian/python2
+
+debian/files
+debian/python-minimal.postinst
+debian/python2-minimal.postinst
+debian/python.postinst
+debian/python.postrm
+debian/python.preinst
+debian/python.prerm
+debian/python-policy.html
+debian/python-policy.txt
 
 debian/README.Debian
 debian/README.idle-python2.7
