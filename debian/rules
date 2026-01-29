@@ -1,5 +1,4 @@
 #!/usr/bin/make -f
-WITHOUT_BENCH=yes 
 
 unexport LANG LC_ALL LC_CTYPE LC_COLLATE LC_TIME LC_NUMERIC LC_MESSAGES
 unexport CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
@@ -40,11 +39,11 @@ on_buildd := $(shell [ -f /CurrentlyBuilding -o "$$LOGNAME" = buildd -o "$$USER"
 
 dh_compat2 := $(shell dpkg --compare-versions "$$(dpkg-query -f '$${Version}' -W debhelper)" lt 9.20150811ubuntu2 && echo DH_COMPAT=2)
 
-  WITHOUT_CHECK := yes
 ifneq (,$(findstring nocheck, $(DEB_BUILD_OPTIONS)))
   WITHOUT_CHECK := yes
 endif
-WITHOUT_BENCH :=
+WITHOUT_CHECK := yes
+WITHOUT_BENCH := yes 
 ifneq (,$(findstring nobench, $(DEB_BUILD_OPTIONS)))
   WITHOUT_BENCH := yes
 endif
