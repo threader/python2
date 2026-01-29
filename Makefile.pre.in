@@ -531,7 +531,7 @@ Modules/_math.o: Modules/_math.c Modules/_math.h
 # Under GNU make, MAKEFLAGS are sorted and normalized; the 's' for
 # -s, --silent or --quiet is always the first char.
 # Under BSD make, MAKEFLAGS might be " -s -v x=y".
-sharedmods: $(BUILDTAUTHON) pybuilddir.txt Modules/_math.o
+sharedmods: $(BUILDPYTHON) pybuilddir.txt Modules/_math.o
 	+@case "$$MAKEFLAGS" in \
 	    *\ -s*|s*) quiet="-q";; \
 	    *) quiet="";; \
