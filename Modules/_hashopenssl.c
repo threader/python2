@@ -409,7 +409,7 @@ EVP_tp_init(EVPobject *self, PyObject *args, PyObject *kwds)
         return -1;
     }
 
-    digest = EVP_get_digestbyname(nameStr);
+    digest = EVP_MD_fetch(NULL, nameStr, NULL);
     if (!digest) {
         PyErr_SetString(PyExc_ValueError, "unknown hash function");
         PyBuffer_Release(&view);
@@ -561,7 +561,7 @@ EVP_new(PyObject *self, PyObject *args, PyObject *kwdict)
         return NULL;
     }
 
-    digest = EVP_get_digestbyname(name);
+    digest = EVP_MD_fetch(NULL, name, NULL);
 
     ret_obj = EVPnew(name_obj, digest, NULL, (unsigned char*)view.buf,
                      view.len);
@@ -685,7 +685,7 @@ pbkdf2_hmac(PyObject *self, PyObject *args, PyObject *kwdict)
         return NULL;
     }
 
-    digest = EVP_get_digestbyname(name);
+    digest = EVP_MD_fetch(NULL, name, NULL);
     if (digest == NULL) {
         PyErr_SetString(PyExc_ValueError, "unsupported hash type");
         goto end;
@@ -862,9 +862,9 @@ generate_hash_name_list(void)
 #define INIT_CONSTRUCTOR_CONSTANTS(NAME)  do { \
     if (CONST_ ## NAME ## _name_obj == NULL) { \
     CONST_ ## NAME ## _name_obj = PyString_FromString(#NAME); \
-        if (EVP_get_digestbyname(#NAME)) { \
+        if (EVP_MD_fetch(NULL, #NAME, NULL)) { \
             CONST_new_ ## NAME ## _ctx_p = EVP_MD_CTX_new(); \
-            EVP_DigestInit(CONST_new_ ## NAME ## _ctx_p, EVP_get_digestbyname(#NAME)); \
+            EVP_DigestInit(CONST_new_ ## NAME ## _ctx_p, EVP_MD_fetch(NULL, #NAME, NULL)); \
         } \
     } \
 } while (0);
