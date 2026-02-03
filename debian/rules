@@ -1022,6 +1022,9 @@ endif
 		$(scriptdir) \
 		$(scriptdir)/doc/html
 
+# Bah not sure what is going on the build scripts not creating the pybench.log
+	touch $(buildd_static)/pybench.log 
+
 	cp -p Misc/HISTORY Misc/README.valgrind Misc/gdbinit \
 		debian/README.maintainers \
 		$(d_dev)/usr/share/doc/python$(VER)/
