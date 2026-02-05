@@ -53,7 +53,7 @@ _PyTime_gettimeofday(_PyTime_timeval *tp)
     return;
 }
 
-void
+int
 _PyTime_Init()
 {
     /* Do nothing.  Needed to force linking. */

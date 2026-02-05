@@ -841,6 +841,8 @@ with_pth
 enable_ipv6
 with_doc_strings
 with_tsc
+with_count_allocs
+with_call_profile
 with_pymalloc
 with_valgrind
 with_wctype_functions
@@ -1547,6 +1549,8 @@ Optional Packages:
   --with-pth              use GNU pth threading libraries
   --with(out)-doc-strings disable/enable documentation strings
   --with(out)-tsc         enable/disable timestamp counter profile
+  --with(out)count-allocs  enable/disable per-type instance accounting
+  --with(out)-call-profile  enable/disable statistics on function call invocation
   --with(out)-pymalloc    disable/enable specialized mallocs
   --with-valgrind         Enable Valgrind support
   --with-wctype-functions use wctype.h functions
@@ -11856,6 +11860,54 @@ if test "$withval" != no
 then
 
 printf "%s\n" "#define WITH_TSC 1" >>confdefs.h
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+else { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+else case e in #(
+  e) { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; } ;;
+esac
+fi
+
+
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for --with-count-allocs" >&5
+printf %s "checking for --with-count-allocs... " >&6; }
+
+# Check whether --with-count-allocs was given.
+if test ${with_count_allocs+y}
+then :
+  withval=$with_count_allocs;
+if test "$withval" != no
+then
+
+printf "%s\n" "#define COUNT_ALLOCS 1" >>confdefs.h
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+else { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+else case e in #(
+  e) { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; } ;;
+esac
+fi
+
+
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for --with-call-profile" >&5
+printf %s "checking for --with-call-profile... " >&6; }
+
+# Check whether --with-call-profile was given.
+if test ${with_call_profile+y}
+then :
+  withval=$with_call_profile;
+if test "$withval" != no
+then
+
+printf "%s\n" "#define CALL_PROFILE 1" >>confdefs.h
 
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
