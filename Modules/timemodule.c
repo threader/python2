@@ -3,7 +3,7 @@
 #include "Python.h"
 #include "structseq.h"
 #include "pytime.h"
-#include "_time.h"
+#include "timefuncs.h"
 
 #define TZNAME_ENCODING "utf-8"
 
