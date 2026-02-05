@@ -240,6 +240,7 @@ MODULE_OBJS=	\
 		Modules/getpath.o \
 		Modules/main.o \
 		Modules/gcmodule.o \
+		Python/pytime.o \
 		Modules/pytime.o
 
 # Used of signalmodule.o is not available
@@ -339,7 +340,6 @@ PYTHON_OBJS=	\
 		Python/pystate.o \
 		Python/pythonrun.o \
                 Python/random.o \
-		Python/pytime.o \
 		Python/structmember.o \
 		Python/symtable.o \
 		Python/sysmodule.o \

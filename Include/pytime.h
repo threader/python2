@@ -262,9 +262,6 @@ typedef struct {
  */
 PyAPI_FUNC(void) _PyTime_gettimeofday(_PyTime_timeval *tp);
 
-/* Dummy to force linking. */
-PyAPI_FUNC(int) _PyTime_Init(void);
-
 #ifdef __cplusplus
 }
 #endif
