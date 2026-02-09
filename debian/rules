@@ -42,8 +42,8 @@ dh_compat2 := $(shell dpkg --compare-versions "$$(dpkg-query -f '$${Version}' -W
 ifneq (,$(findstring nocheck, $(DEB_BUILD_OPTIONS)))
   WITHOUT_CHECK := yes
 endif
-WITHOUT_CHECK := yes
-WITHOUT_BENCH := yes 
+WITHOUT_CHECK := no
+WITHOUT_BENCH := no 
 ifneq (,$(findstring nobench, $(DEB_BUILD_OPTIONS)))
   WITHOUT_BENCH := yes
 endif
@@ -306,7 +306,7 @@ PROFILE_EXCLUDES += test_zipfile
 PROFILE_EXCLUDES += test_xmlrpc
 PROFILE_EXCLUDES += test_bsddb3
 
-PROFILE_TASK = ../Lib/test/regrtest.py \
+PROFILE_TASK = ../Lib/test/regrtest.py -W \
 	-x $(sort $(TEST_EXCLUDES) $(PROFILE_EXCLUDES))
 
 stamps/stamp-build-static: stamps/stamp-configure-static
@@ -1021,6 +1021,9 @@ endif
 		usr/share/man/man1 \
 		$(scriptdir) \
 		$(scriptdir)/doc/html
+
+# Bah not sure what is going on the build scripts not creating the pybench.log
+	touch $(buildd_static)/pybench.log 
 
 	cp -p Misc/HISTORY Misc/README.valgrind Misc/gdbinit \
 		debian/README.maintainers \
