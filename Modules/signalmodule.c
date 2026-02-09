@@ -392,8 +392,20 @@ signal_siginterrupt(PyObject *self, PyObject *args)
                         "signal number out of range");
         return NULL;
     }
-    if (siginterrupt(sig_num, flag)<0) {
-        PyErr_SetFromErrno(PyExc_RuntimeError);
+#ifdef HAVE_SIGACTION
+    struct sigaction act;
+    (void) sigaction(sig_num, NULL, &act);
+    if (flag) {
+        act.sa_flags &= ~SA_RESTART;
+    }
+    else {
+        act.sa_flags |= SA_RESTART;
+    }
+    if (sigaction(sig_num, &act, NULL) < 0) {
+#else
+    if (siginterrupt(sig_num, flag) < 0) {
+#endif
+        PyErr_SetFromErrno(PyExc_OSError);
         return NULL;
     }
 
