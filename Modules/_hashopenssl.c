@@ -110,7 +110,11 @@ _setException(PyObject *exc)
     ERR_clear_error();
 
     lib = ERR_lib_error_string(errcode);
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    func = NULL;
+#else
     func = ERR_func_error_string(errcode);
+#endif
     reason = ERR_reason_error_string(errcode);
 
     if (lib && func) {
