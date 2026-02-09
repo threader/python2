@@ -78,6 +78,12 @@ class MiscTests(unittest.TestCase):
         elem.tail = X()  # shouldn't crash
         elem.clear()
 
+        elem.text = X()
+        elem.__setstate__({'tag': 42})  # shouldn't cause an assertion failure
+        elem.clear()
+
+        elem.tail = X()
+        elem.__setstate__({'tag': 42})  # shouldn't cause an assertion failure
 
 def test_main():
     from test import test_xml_etree, test_xml_etree_c
