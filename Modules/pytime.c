@@ -55,12 +55,13 @@ _PyTime_gettimeofday(_PyTime_timeval *tp)
             info->implementation = "clock_gettime(CLOCK_REALTIME)";
             info->monotonic = 0;
             info->adjustable = 1;
-#endif
+
             if (clock_getres(CLOCK_REALTIME, &res) == 0)
                 info->resolution = res.tv_sec + res.tv_nsec * 1e-9;
             else
                 info->resolution = 1e-9;
-//        }
+        }
+#endif
         tp->tv_sec = ts.tv_sec;
         tp->tv_usec = ts.tv_nsec / 1000;
         return;
