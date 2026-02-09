@@ -47,6 +47,7 @@ _PyTime_gettimeofday(_PyTime_timeval *tp)
 
     /* test clock_gettime(CLOCK_REALTIME) */
 #ifdef HAVE_CLOCK_GETTIME
+#undef HAVE_FTIME
     err  = clock_gettime(CLOCK_REALTIME, &ts);
     if (err == 0) {
 #if 0
@@ -77,6 +78,27 @@ _PyTime_gettimeofday(_PyTime_timeval *tp)
     if (gettimeofday(tp, (struct timezone *)NULL) == 0)
         return;
 #endif /* !GETTIMEOFDAY_NO_TZ */
+
+#else /* !HAVE_GETTIMEOFDAY */
+    /* No flavor of gettimeofday exists on this platform.  Python's
+     * time.time() does a lot of other platform tricks to get the
+     * best time it can on the platform, and we're not going to do
+     * better than that (if we could, the better code would belong
+     * in time.time()!)  We're limited by the precision of a double,
+     * though.
+     */
+    PyObject *time;
+    double dtime;
+
+    time = time_time();
+    if (time == NULL)
+        return NULL;
+    dtime = PyFloat_AsDouble(time);
+    Py_DECREF(time);
+    if (dtime == -1.0 && PyErr_Occurred())
+        return NULL;
+    return datetime_from_timestamp(tp, dtime, tzinfo);
+
 #endif /* !HAVE_GETTIMEOFDAY */
 
 #ifdef HAVE_FTIME

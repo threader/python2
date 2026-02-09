@@ -11,7 +11,6 @@
 #include <time.h>
 
 #include "pytime.h"
-#include "timefuncs.h"
 
 /* Differentiate between building the core module and building extension
  * modules.
@@ -142,18 +141,6 @@ divmod(int x, int y, int *r)
     return quo;
 }
 
-/* Round a double to the nearest long.  |x| must be small enough to fit
- * in a C long; this is not checked.
- */
-static long
-round_to_long(double x)
-{
-    if (x >= 0.0)
-        x = floor(x + 0.5);
-    else
-        x = ceil(x - 0.5);
-    return (long)x;
-}
 
 /* ---------------------------------------------------------------------------
  * General calendrical helper functions
@@ -3741,90 +3728,43 @@ datetime_new(PyTypeObject *type, PyObject *args, PyObject *kw)
 typedef struct tm *(*TM_FUNC)(const time_t *timer);
 
 /* Internal helper.
- * Build datetime from a time_t and a distinct count of microseconds.
- * Pass localtime or gmtime for f, to control the interpretation of timet.
- */
-static PyObject *
-datetime_from_timet_and_us(PyObject *cls, TM_FUNC f, time_t timet, int us,
-                           PyObject *tzinfo)
-{
-    struct tm *tm;
-    PyObject *result = NULL;
-
-    tm = f(&timet);
-    if (tm) {
-        /* The platform localtime/gmtime may insert leap seconds,
-         * indicated by tm->tm_sec > 59.  We don't care about them,
-         * except to the extent that passing them on to the datetime
-         * constructor would raise ValueError for a reason that
-         * made no sense to the user.
-         */
-        if (tm->tm_sec > 59)
-            tm->tm_sec = 59;
-        result = PyObject_CallFunction(cls, "iiiiiiiO",
-                                       tm->tm_year + 1900,
-                                       tm->tm_mon + 1,
-                                       tm->tm_mday,
-                                       tm->tm_hour,
-                                       tm->tm_min,
-                                       tm->tm_sec,
-                                       us,
-                                       tzinfo);
-    }
-    else
-        PyErr_SetString(PyExc_ValueError,
-                        "timestamp out of range for "
-                        "platform localtime()/gmtime() function");
-    return result;
-}
-
-/* Internal helper.
- * Build datetime from a Python timestamp.  Pass localtime or gmtime for f,
- * to control the interpretation of the timestamp.  Since a double doesn't
- * have enough bits to cover a datetime's full range of precision, it's
- * better to call datetime_from_timet_and_us provided you have a way
- * to get that much precision (e.g., C time() isn't good enough).
- */
-static PyObject *
-datetime_from_timestamp(PyObject *cls, TM_FUNC f, double timestamp,
-                        PyObject *tzinfo)
-{
-    time_t timet;
-    double fraction;
-    int us;
-
-    timet = _PyTime_DoubleToTimet(timestamp);
-    if (timet == (time_t)-1 && PyErr_Occurred())
-        return NULL;
-    fraction = timestamp - (double)timet;
-    us = (int)round_to_long(fraction * 1e6);
-    if (us < 0) {
-        /* Truncation towards zero is not what we wanted
-           for negative numbers (Python's mod semantics) */
-        timet -= 1;
-        us += 1000000;
-    }
-    /* If timestamp is less than one microsecond smaller than a
-     * full second, round up. Otherwise, ValueErrors are raised
-     * for some floats. */
-    if (us == 1000000) {
-        timet += 1;
-        us = 0;
-    }
-    return datetime_from_timet_and_us(cls, f, timet, us, tzinfo);
-}
-
-/* Internal helper.
  * Build most accurate possible datetime for current time.  Pass localtime or
  * gmtime for f as appropriate.
  */
 static PyObject *
 datetime_best_possible(PyObject *cls, TM_FUNC f, PyObject *tzinfo)
 {
-    _PyTime_timeval t;
-    _PyTime_gettimeofday(&t);
+#ifdef HAVE_GETTIMEOFDAY
+    struct timeval t;
+
+#ifdef GETTIMEOFDAY_NO_TZ
+    gettimeofday(&t);
+#else
+    gettimeofday(&t, (struct timezone *)NULL);
+#endif
     return datetime_from_timet_and_us(cls, f, t.tv_sec, (int)t.tv_usec,
                                       tzinfo);
+
+#else   /* ! HAVE_GETTIMEOFDAY */
+    /* No flavor of gettimeofday exists on this platform.  Python's
+     * time.time() does a lot of other platform tricks to get the
+     * best time it can on the platform, and we're not going to do
+     * better than that (if we could, the better code would belong
+     * in time.time()!)  We're limited by the precision of a double,
+     * though.
+     */
+    PyObject *time;
+    double dtime;
+
+    time = time_time();
+    if (time == NULL)
+        return NULL;
+    dtime = PyFloat_AsDouble(time);
+    Py_DECREF(time);
+    if (dtime == -1.0 && PyErr_Occurred())
+        return NULL;
+    return datetime_from_timestamp(cls, f, dtime, tzinfo);
+#endif  /* ! HAVE_GETTIMEOFDAY */
 }
 
 /* Return best possible local time -- this isn't constrained by the
