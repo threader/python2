@@ -248,6 +248,20 @@ PyAPI_FUNC(time_t) _PyTime_DoubleToTimet(double x);
 /* Get the current time since the epoch in seconds */
 PyAPI_FUNC(double) _PyTime_FloatTime(void);
 
+#ifdef HAVE_GETTIMEOFDAY
+typedef struct timeval _PyTime_timeval;
+#else
+typedef struct {
+    time_t       tv_sec;   /* seconds since Jan. 1, 1970 */
+    long         tv_usec;  /* and microseconds */
+} _PyTime_timeval;
+#endif
+
+/* Similar to POSIX gettimeofday but cannot fail.  If system gettimeofday
+ * fails or is not available, fall back to lower resolution clocks.
+ */
+PyAPI_FUNC(void) _PyTime_gettimeofday(_PyTime_timeval *tp);
+
 #ifdef __cplusplus
 }
 #endif
