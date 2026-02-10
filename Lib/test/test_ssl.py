@@ -183,9 +183,9 @@ def skip_if_openssl_cnf_minprotocol_gt_tls11(func):
                     match = re.match(r"MinProtocol\s*=\s*(TLSv\d+\S*)", line)
                     if match:
                         tls_ver = match.group(1)
-                        if tls_ver > "TLSv1.1":
+                        if tls_ver > "TLSv1.3":
                             raise unittest.SkipTest(
-                                "%s has MinProtocol = %s which is > TLSv1." %
+                                "%s has MinProtocol = %s which is > TLSv1.3" %
                                 (openssl_cnf, tls_ver))
         except (EnvironmentError, UnicodeDecodeError) as err:
             # no config file found, etc.
