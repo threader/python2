@@ -114,7 +114,7 @@ _PyTime_gettimeofday(_PyTime_timeval *tp)
     }
 #endif
 
-#else /* !HAVE_FTIME */
+#elif !defined( HAVE_CLOCK_GETTIME) && !defined (HAVE_FTIME) /* !HAVE_FTIME */
     tp->tv_sec = time(NULL);
     tp->tv_usec = 0;
 #endif /* !HAVE_FTIME */
