@@ -99,9 +99,14 @@ struct py_ssl_library_code {
 };
 
 /* Include generated data (error codes) */
-#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+/* See Tools/ssl/make_ssl_data.py for notes on adding a new version. */
+#if (OPENSSL_VERSION_NUMBER >= 0x30401000L)
+#include "_ssl_data_35.h"
+#elif (OPENSSL_VERSION_NUMBER >= 0x30100000L)
+#include "_ssl_data_340.h"
+#elif (OPENSSL_VERSION_NUMBER >= 0x30000000L)
 #include "_ssl_data_300.h"
-#elif (OPENSSL_VERSION_NUMBER >= 0x10101000L) && !defined(LIBRESSL_VERSION_NUMBER)
+#elif (OPENSSL_VERSION_NUMBER >= 0x10101000L)
 #include "_ssl_data_111.h"
 #else
 #include "_ssl_data.h"
@@ -2322,7 +2327,7 @@ context_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     /* A bare minimum cipher list without completly broken cipher suites.
      * It's far from perfect but gives users a better head start. */
     if (proto_version != PY_SSL_VERSION_SSL2) {
-        result = SSL_CTX_set_cipher_list(ctx, "HIGH:!aNULL:!eNULL:!MD5");
+        result = SSL_CTX_set_cipher_list(ctx, "DEFAULT:!aNULL:!eNULL:!MD5:!3DES:!DES:!RC4:!IDEA:!SEED:!aDSS:!SRP:!PSK");
     } else {
         /* SSLv2 needs MD5 */
         result = SSL_CTX_set_cipher_list(ctx, "HIGH:!aNULL:!eNULL");
