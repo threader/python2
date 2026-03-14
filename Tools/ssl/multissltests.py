@@ -41,24 +41,23 @@ import tarfile
 log = logging.getLogger("multissl")
 
 OPENSSL_OLD_VERSIONS = [
-     "1.0.1u",
-     "1.0.2o",
+    "1.1.1w",
+    "3.1.8",
 ]
 
 OPENSSL_RECENT_VERSIONS = [
-    "1.1.1k",
-    "3.0.1",
+    "3.0.18",
+    "3.2.6",
+    "3.3.5",
+    "3.4.3",
+    "3.5.4",
+    # See make_ssl_data.py for notes on adding a new version.
 ]
 
 LIBRESSL_OLD_VERSIONS = [
-    "2.3.10",
-    "2.4.5",
 ]
 
 LIBRESSL_RECENT_VERSIONS = [
-    "2.5.5",
-    "2.6.5",
-    "2.7.4",
 ]
 
 # store files in ../multissl
@@ -70,9 +69,8 @@ MULTISSL_DIR = os.path.abspath(os.path.join(PYTHONROOT, '..', 'multissl'))
 parser = argparse.ArgumentParser(
     prog='multissl',
     description=(
-        "Run CPython tests with multiple OpenSSL and LibreSSL "
-        "versions."
-    )
+        "Run CPython tests with multiple cryptography libraries/versions."
+    ),
 )
 parser.add_argument(
     '--debug',
@@ -82,7 +80,7 @@ parser.add_argument(
 parser.add_argument(
     '--disable-ancient',
     action='store_true',
-    help="Don't test OpenSSL < 1.0.2 and LibreSSL < 2.5.3.",
+    help="Don't test OpenSSL and LibreSSL versions without upstream support",
 )
 parser.add_argument(
     '--openssl',
