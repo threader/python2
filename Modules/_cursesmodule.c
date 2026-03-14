@@ -131,6 +131,28 @@ typedef chtype attr_t;           /* No attr_t type is available */
 #define STRICT_SYSV_CURSES
 #endif
 
+#if defined(HAVE_NCURSESW) && NCURSES_EXT_FUNCS+0 >= 20170401 && NCURSES_EXT_COLORS+0 >= 20170401
+#define _NCURSES_EXTENDED_COLOR_FUNCS   1
+#else
+#define _NCURSES_EXTENDED_COLOR_FUNCS   0
+#endif
+
+#if _NCURSES_EXTENDED_COLOR_FUNCS
+#define _CURSES_COLOR_VAL_TYPE          int
+#define _CURSES_COLOR_NUM_TYPE          int
+#define _CURSES_INIT_COLOR_FUNC         init_extended_color
+#define _CURSES_INIT_PAIR_FUNC          init_extended_pair
+#define _COLOR_CONTENT_FUNC             extended_color_content
+#define _CURSES_PAIR_CONTENT_FUNC       extended_pair_content
+#else
+#define _CURSES_COLOR_VAL_TYPE          short
+#define _CURSES_COLOR_NUM_TYPE          short
+#define _CURSES_INIT_COLOR_FUNC         init_color
+#define _CURSES_INIT_PAIR_FUNC          init_pair
+#define _COLOR_CONTENT_FUNC             color_content
+#define _CURSES_PAIR_CONTENT_FUNC       pair_content
+#endif  /* _NCURSES_EXTENDED_COLOR_FUNCS */
+
 /* Definition of exception curses.error */
 
 static PyObject *PyCursesError;
@@ -1973,11 +1995,12 @@ PyCurses_InitScr(PyObject *self)
 
     initialised = initialised_setupterm = TRUE;
 
+
 /* This was moved from initcurses() because it core dumped on SGI,
    where they're not defined until you've called initscr() */
 #define SetDictInt(string,ch)                                           \
     do {                                                                \
-        PyObject *o = PyInt_FromLong((long) (ch));                      \
+        PyObject *o = PyLong_FromLong((long) (ch));                      \
         if (o && PyDict_SetItemString(ModDict, string, o) == 0)     {   \
             Py_DECREF(o);                                               \
         }                                                               \
@@ -2520,13 +2543,23 @@ PyCurses_Start_Color(PyObject *self)
         }                                                           \
     } while (0)
 
+
+ if (!_NCURSES_EXTENDED_COLOR_FUNCS  && COLORS == SIZEOF_INT && COLOR_PAIRS  ==  SIZEOF_SHORT) {
+    DICT_ADD_INT_VALUE("COLORS", (int)COLORS);
+    DICT_ADD_INT_VALUE("COLOR_PAIRS", (short)COLOR_PAIRS);
+}
+
+if(_NCURSES_EXTENDED_COLOR_FUNCS) {
     DICT_ADD_INT_VALUE("COLORS", COLORS);
     DICT_ADD_INT_VALUE("COLOR_PAIRS", COLOR_PAIRS);
-
-     Py_INCREF(Py_None);
+}
 #undef DICT_ADD_INT_VALUE
-    }
+
+// #undef DICT_ADD_INT_VALUE
+     Py_INCREF(Py_None);  
         return Py_None;
+  }
+
 }
 
 static PyObject *
@@ -2701,6 +2734,76 @@ PyCurses_Use_Default_Colors(PyObject *self)
     }
 }
 #endif /* STRICT_SYSV_CURSES */
+
+#ifdef NCURSES_VERSION
+
+PyDoc_STRVAR(ncurses_version__doc__,
+"curses.ncurses_version\n\
+\n\
+Ncurses version information as a named tuple.");
+
+static PyObject *
+make_ncurses_version(PyTypeObject *type)
+{
+//    PyObject *ncurses_version = PyBytes_FromString(PyCursesVersion);
+    PyObject *ncurses_version = PyString_FromString(PyCursesVersion);
+
+    //PyObject *curses_version = PyString_FromString(PyCursesVersion);
+
+    if (ncurses_version == NULL) {
+        return NULL;
+    }
+    const char *str = curses_version();
+    unsigned long major = 0, minor = 0, patch = 0;
+    if (!str || sscanf(str, "%*[^0-9]%lu.%lu.%lu", &major, &minor, &patch) < 3) {
+        // Fallback to header version, which cannot be that wrong
+        major = NCURSES_VERSION_MAJOR;
+        minor = NCURSES_VERSION_MINOR;
+        patch = NCURSES_VERSION_PATCH;
+    }
+
+    return ncurses_version;
+}
+
+#endif /* NCURSES_VERSION */
+
+#if 0
+PyDoc_STRVAR(_curses_has_extended_color_support__doc__,
+"has_extended_color_support($module, /)\n"
+"--\n"
+"\n"
+"Return True if the module supports extended colors; otherwise, return False.\n"
+"\n"
+"Extended color support allows more than 256 color-pairs for terminals\n"
+"that support more than 16 colors (e.g. xterm-256color).");
+#endif 
+#define _CURSES_HAS_EXTENDED_COLOR_SUPPORT_METHODDEF    \
+    {"has_extended_color_support", (PyCFunction)_curses_has_extended_color_support, METH_NOARGS, _curses_has_extended_color_support__doc__},
+
+static PyObject *
+_curses_has_extended_color_support_impl(PyObject *module);
+
+static PyObject *
+_curses_has_extended_color_support(PyObject *module, PyObject *Py_UNUSED(ignored))
+{
+    return _curses_has_extended_color_support_impl(module);
+}
+
+/*[clinic input]
+_curses.has_extended_color_support
+
+Return True if the module supports extended colors; otherwise, return False.
+
+Extended color support allows more than 256 color-pairs for terminals
+that support more than 16 colors (e.g. xterm-256color).
+[clinic start generated code]*/
+
+static PyObject *
+_curses_has_extended_color_support_impl(PyObject *module)
+/*[clinic end generated code: output=68f1be2b57d92e22 input=4b905f046e35ee9f]*/
+{
+    return PyBool_FromLong(_NCURSES_EXTENDED_COLOR_FUNCS);
+}
 
 /* List of functions defined in the module */
 

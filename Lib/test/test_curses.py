@@ -38,6 +38,7 @@ def requires_curses_func(name):
                                'requires curses.%s' % name)
 
 term = os.environ.get('TERM')
+SHORT_MAX = 0x7fff
 
 # If newterm was supported we could use it instead of initscr and not exit
 @unittest.skipIf(not term or term == 'unknown',
@@ -263,18 +264,69 @@ class TestCurses(unittest.TestCase):
         if hasattr(curses, 'use_env'):
             curses.use_env(1)
 
+    def bad_colors(self):
+        return (-1, curses.COLORS, -2**31 - 1, 2**31, -2**63 - 1, 2**63, 2**64)
+
+    def bad_colors2(self):
+        return (curses.COLORS, 2**31, 2**63, 2**64)
+
+    def bad_pairs(self):
+        return (-1, -2**31 - 1, 2**31, -2**63 - 1, 2**63, 2**64)
+
+    def test_has_colors(self):
+        self.assertIsInstance(curses.has_colors(), bool)
+        self.assertIsInstance(curses.can_change_color(), bool)
+
     # Functions only available on a few platforms
     def test_colors_funcs(self):
         if not curses.has_colors():
             self.skipTest('requires colors support')
         curses.start_color()
- #       curses.init_pair(2, 1,1)
+
+    def test_color_content(self):
+        curses.start_color()
         self.assertEqual(curses.color_content(curses.COLOR_BLACK), (0, 0, 0))
         curses.color_content(0)
         maxcolor = curses.COLORS - 1
         curses.color_content(maxcolor)
-        curses.color_pair(2)
+
+        for color in self.bad_colors():
+            self.assertRaises(ValueError, curses.color_content, color)
+ #       curses.init_pair(2, 1,1)
+      #  curses.color_pair(2)
       #  print(curses.pair_content(curses.COLOR_PAIRS - 1))
+
+      #  curses.pair_content(curses.COLOR_PAIRS - 1)
+      #  curses.pair_number(0)
+    def test_init_color(self):
+        if not curses.can_change_color():
+            self.skipTest('cannot change color')
+
+        old = curses.color_content(0)
+        try:
+            curses.init_color(0, *old)
+        except curses.error:
+            self.skipTest('cannot change color (init_color() failed)')
+        self.addCleanup(curses.init_color, 0, *old)
+        curses.init_color(0, 0, 0, 0)
+        self.assertEqual(curses.color_content(0), (0, 0, 0))
+        curses.init_color(0, 1000, 1000, 1000)
+        self.assertEqual(curses.color_content(0), (1000, 1000, 1000))
+
+        maxcolor = curses.COLORS - 1
+        old = curses.color_content(maxcolor)
+        curses.init_color(maxcolor, *old)
+        self.addCleanup(curses.init_color, maxcolor, *old)
+        curses.init_color(maxcolor, 0, 500, 1000)
+        self.assertEqual(curses.color_content(maxcolor), (0, 500, 1000))
+
+        for color in self.bad_colors():
+            self.assertRaises(ValueError, curses.init_color, color, 0, 0, 0)
+        for comp in (-1, 1001):
+            self.assertRaises(ValueError, curses.init_color, 0, comp, 0, 0)
+            self.assertRaises(ValueError, curses.init_color, 0, 0, comp, 0)
+            self.assertRaises(ValueError, curses.init_color, 0, 0, 0, comp)
+
     def get_pair_limit(self):
         pair_limit = curses.COLOR_PAIRS
         if hasattr(curses, 'ncurses_version'):
@@ -291,10 +343,16 @@ class TestCurses(unittest.TestCase):
             except ValueError:
                 pair_limit = curses.COLOR_PAIRS
         return pair_limit
+     #   curses.pair_content(pair_limit)
 
-        curses.pair_content(pair_limit)
-      #  curses.pair_content(curses.COLOR_PAIRS - 1)
-        curses.pair_number(0)
+    def test_pair_content(self):
+        curses.pair_content(0)
+        maxpair = self.get_pair_limit() - 1
+        if maxpair > 0:
+            curses.pair_content(maxpair)
+
+        for pair in self.bad_pairs():
+            self.assertRaises(ValueError, curses.pair_content, pair)
 
         if hasattr(curses, 'use_default_colors'):
             curses.use_default_colors()
@@ -391,6 +449,34 @@ class TestCurses(unittest.TestCase):
         stdscr.resize(lines-2, cols-2)
         # this may cause infinite recursion, leading to a RuntimeError
         box._insert_printable_char('a')
+
+ #   @requires_curses_func('unget_wch')
+    @unittest.skipIf(getattr(curses, 'ncurses_version', (99,)) < (5, 8),
+                     "unget_wch is broken in ncurses 5.7 and earlier")
+
+    @requires_curses_func('ncurses_version')
+    def test_ncurses_version(self):
+        v = curses.ncurses_version
+#        if verbose:
+        print(curses.ncurses_version)
+        self.assertIsInstance(v[:], tuple)
+        self.assertEqual(len(v), 3)
+        self.assertIsInstance(v[0], int)
+        self.assertIsInstance(v[1], int)
+        self.assertIsInstance(v[2], int)
+        self.assertIsInstance(v.major, int)
+        self.assertIsInstance(v.minor, int)
+        self.assertIsInstance(v.patch, int)
+        self.assertEqual(v[0], v.major)
+        self.assertEqual(v[1], v.minor)
+        self.assertEqual(v[2], v.patch)
+        self.assertGreaterEqual(v.major, 0)
+        self.assertGreaterEqual(v.minor, 0)
+        self.assertGreaterEqual(v.patch, 0)
+
+    def test_has_extended_color_support(self):
+        r = curses.has_extended_color_support()
+        self.assertIsInstance(r, bool)
 
 
 class TestAscii(unittest.TestCase):
