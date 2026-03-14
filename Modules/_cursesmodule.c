@@ -2489,17 +2489,12 @@ PyCurses_setsyx(PyObject *self, PyObject *args)
 static PyObject *
 PyCurses_Start_Color(PyObject *self)
 {
-    int code;
-    PyObject *c, *cp;
 
     PyCursesInitialised;
     if (start_color() == ERR) {
         PyErr_SetString(PyCursesError, "start_color() returned ERR");
         return NULL;
-    }
-
-    code = start_color();
-  if (code != ERR) {
+    } else {
         initialisedcolors = TRUE;
 #if 0
         c = PyInt_FromLong((long) COLORS);
@@ -2527,13 +2522,11 @@ PyCurses_Start_Color(PyObject *self)
 
     DICT_ADD_INT_VALUE("COLORS", COLORS);
     DICT_ADD_INT_VALUE("COLOR_PAIRS", COLOR_PAIRS);
+
+     Py_INCREF(Py_None);
 #undef DICT_ADD_INT_VALUE
-        Py_INCREF(Py_None);
-        return Py_None;
-    } else {
-        PyErr_SetString(PyCursesError, "start_color() returned ERR");
-        return NULL;
     }
+        return Py_None;
 }
 
 static PyObject *
