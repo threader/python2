@@ -268,10 +268,32 @@ class TestCurses(unittest.TestCase):
         if not curses.has_colors():
             self.skipTest('requires colors support')
         curses.start_color()
-        curses.init_pair(2, 1,1)
-        curses.color_content(1)
+ #       curses.init_pair(2, 1,1)
+        self.assertEqual(curses.color_content(curses.COLOR_BLACK), (0, 0, 0))
+        curses.color_content(0)
+        maxcolor = curses.COLORS - 1
+        curses.color_content(maxcolor)
         curses.color_pair(2)
-        curses.pair_content(curses.COLOR_PAIRS - 1)
+      #  print(curses.pair_content(curses.COLOR_PAIRS - 1))
+    def get_pair_limit(self):
+        pair_limit = curses.COLOR_PAIRS
+        if hasattr(curses, 'ncurses_version'):
+            if curses.has_extended_color_support():
+                pair_limit += 2*curses.COLORS + 1
+            if (not curses.has_extended_color_support()
+                    or (6, 1) <= curses.ncurses_version < (6, 2)):
+                pair_limit = min(pair_limit, SHORT_MAX)
+            # If use_default_colors() is called, the upper limit of the extended
+            # range may be restricted, so we need to check if the limit is still
+            # correct
+            try:
+                curses.init_pair(pair_limit - 1, 0, 0)
+            except ValueError:
+                pair_limit = curses.COLOR_PAIRS
+        return pair_limit
+
+        curses.pair_content(pair_limit)
+      #  curses.pair_content(curses.COLOR_PAIRS - 1)
         curses.pair_number(0)
 
         if hasattr(curses, 'use_default_colors'):

@@ -2493,10 +2493,15 @@ PyCurses_Start_Color(PyObject *self)
     PyObject *c, *cp;
 
     PyCursesInitialised;
+    if (start_color() == ERR) {
+        PyErr_SetString(PyCursesError, "start_color() returned ERR");
+        return NULL;
+    }
 
     code = start_color();
-    if (code != ERR) {
+  if (code != ERR) {
         initialisedcolors = TRUE;
+#if 0
         c = PyInt_FromLong((long) COLORS);
         PyDict_SetItemString(ModDict, "COLORS", c);
         Py_DECREF(c);
@@ -2504,6 +2509,25 @@ PyCurses_Start_Color(PyObject *self)
         PyDict_SetItemString(ModDict, "COLOR_PAIRS", cp);
         Py_DECREF(cp);
         Py_INCREF(Py_None);
+#endif
+//    PyObject *ModDict = PyModule_GetDict(module); // borrowed
+
+#define DICT_ADD_INT_VALUE(NAME, VALUE)                             \
+    do {                                                            \
+        PyObject *value = PyLong_FromLong((long)(VALUE));           \
+        if (value == NULL) {                                        \
+            return NULL;                                            \
+        }                                                           \
+        int rc = PyDict_SetItemString(ModDict, (NAME), value);  \
+        Py_DECREF(value);                                           \
+        if (rc < 0) {                                               \
+            return NULL;                                            \
+        }                                                           \
+    } while (0)
+
+    DICT_ADD_INT_VALUE("COLORS", COLORS);
+    DICT_ADD_INT_VALUE("COLOR_PAIRS", COLOR_PAIRS);
+#undef DICT_ADD_INT_VALUE
         return Py_None;
     } else {
         PyErr_SetString(PyCursesError, "start_color() returned ERR");
