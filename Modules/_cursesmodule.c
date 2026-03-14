@@ -2528,6 +2528,7 @@ PyCurses_Start_Color(PyObject *self)
     DICT_ADD_INT_VALUE("COLORS", COLORS);
     DICT_ADD_INT_VALUE("COLOR_PAIRS", COLOR_PAIRS);
 #undef DICT_ADD_INT_VALUE
+        Py_INCREF(Py_None);
         return Py_None;
     } else {
         PyErr_SetString(PyCursesError, "start_color() returned ERR");
