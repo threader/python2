@@ -4676,23 +4676,83 @@ then
   [Define if you have struct stat.st_mtimensec])
 fi
 
-# first curses configure check
-ac_save_cppflags="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS `$PKG_CONFIG --cflags ncursesw`"
 
-AC_CHECK_HEADERS(curses.h ncurses.h)
+dnl PY_CHECK_CURSES(LIBCURSES, LIBPANEL)
+dnl Sets 'have_curses' and 'have_panel'.
+dnl For the PKG_CHECK_MODULES() calls, we can safely reuse the first variable
+dnl here, since we're only calling the macro a second time if the first call
+dnl fails.
+AC_DEFUN([PY_CHECK_CURSES], [dnl
+AS_VAR_PUSHDEF([curses_var], [m4_toupper([$1])])
+AS_VAR_PUSHDEF([panel_var], [m4_toupper([$2])])
+PKG_CHECK_MODULES([CURSES], [$1],
+  [AC_DEFINE([HAVE_]curses_var, [1], [Define if you have the '$1' library])
+   AS_VAR_SET([have_curses], [yes])
+   PKG_CHECK_MODULES([PANEL], [$2],
+    [AC_DEFINE([HAVE_]panel_var, [1], [Define if you have the '$2' library])
+     AS_VAR_SET([have_panel], [yes])],
+    [AS_VAR_SET([have_panel], [no])])],
+  [AS_VAR_SET([have_curses], [no])])
+AS_VAR_POPDEF([curses_var])
+AS_VAR_POPDEF([panel_var])])
 
-# On Solaris, term.h requires curses.h
-AC_CHECK_HEADERS(term.h,,,[
-#ifdef HAVE_CURSES_H
-#include <curses.h>
+# Check for ncursesw/panelw first. If that fails, try ncurses/panel.
+PY_CHECK_CURSES([ncursesw], [panelw])
+AS_VAR_IF([have_curses], [no],
+          [PY_CHECK_CURSES([ncurses], [panel])])
+
+  # Make sure we've got the header defines.
+  AS_VAR_APPEND([CPPFLAGS], [" $CURSES_CFLAGS $PANEL_CFLAGS"])
+  AC_CHECK_HEADERS(m4_normalize([
+    ncursesw/curses.h ncursesw/ncurses.h ncursesw/panel.h
+    ncurses/curses.h ncurses/ncurses.h ncurses/panel.h
+    curses.h ncurses.h panel.h
+  ]))
+
+  # Check that we're able to link with crucial curses/panel functions. This
+  # also serves as a fallback in case pkg-config failed.
+  AS_VAR_APPEND([LIBS], [" $CURSES_LIBS $PANEL_LIBS"])
+  AC_SEARCH_LIBS([initscr], [ncursesw ncurses],
+    [AS_VAR_IF([have_curses], [no],
+      [AS_VAR_SET([have_curses], [yes])
+       CURSES_LIBS=${CURSES_LIBS-"$ac_cv_search_initscr"}])],
+    [AS_VAR_SET([have_curses], [no])])
+  AC_SEARCH_LIBS([update_panels], [panelw panel],
+    [AS_VAR_IF([have_panel], [no],
+      [AS_VAR_SET([have_panel], [yes])
+       PANEL_LIBS=${PANEL_LIBS-"$ac_cv_search_update_panels"}])],
+    [AS_VAR_SET([have_panel], [no])])
+
+dnl Issue #25720: ncurses has introduced the NCURSES_OPAQUE symbol making opaque
+dnl structs since version 5.7.  If the macro is defined as zero before including
+dnl [n]curses.h, ncurses will expose fields of the structs regardless of the
+dnl configuration.
+AC_DEFUN([_CURSES_INCLUDES],dnl
+[
+#define NCURSES_OPAQUE 0
+#if defined(HAVE_NCURSESW_NCURSES_H)
+#  include <ncursesw/ncurses.h>
+#elif defined(HAVE_NCURSESW_CURSES_H)
+#  include <ncursesw/curses.h>
+#elif defined(HAVE_NCURSES_NCURSES_H)
+#  include <ncurses/ncurses.h>
+#elif defined(HAVE_NCURSES_CURSES_H)
+#  include <ncurses/curses.h>
+#elif defined(HAVE_NCURSES_H)
+#  include <ncurses.h>
+#elif defined(HAVE_CURSES_H)
+#  include <curses.h>
 #endif
 ])
+
+
+# On Solaris, term.h requires curses.h
+AC_CHECK_HEADERS([term.h], [], [], _CURSES_INCLUDES)
 
 # On HP/UX 11.0, mvwdelch is a block with a return statement
 AC_MSG_CHECKING(whether mvwdelch is an expression)
 AC_CACHE_VAL(ac_cv_mvwdelch_is_expression,
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <curses.h>]], [[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(_CURSES_INCLUDES, [[
   int rtn;
   rtn = mvwdelch(0,0,0);
 ]])],
@@ -4702,7 +4762,7 @@ AC_MSG_RESULT($ac_cv_mvwdelch_is_expression)
 
 if test "$ac_cv_mvwdelch_is_expression" = yes
 then
-  AC_DEFINE(MVWDELCH_IS_EXPRESSION, 1,
+  AC_DEFINE([MVWDELCH_IS_EXPRESSION], [1],
   [Define if mvwdelch in curses.h is an expression.])
 fi
 
@@ -4712,10 +4772,9 @@ fi
 # configuration.
 AC_MSG_CHECKING(whether WINDOW has _flags)
 AC_CACHE_VAL(ac_cv_window_has_flags,
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(_CURSES_INCLUDES, [[
   #define NCURSES_OPAQUE 0
   #include <curses.h>
-]], [[
   WINDOW *w;
   w->_flags = 0;
 ]])],
@@ -4726,12 +4785,12 @@ AC_MSG_RESULT($ac_cv_window_has_flags)
 
 if test "$ac_cv_window_has_flags" = yes
 then
-  AC_DEFINE(WINDOW_HAS_FLAGS, 1, 
+  AC_DEFINE([WINDOW_HAS_FLAGS], [1],
   [Define if WINDOW in curses.h offers a field _flags.])
 fi
 
 AC_MSG_CHECKING(for is_pad)
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <curses.h>]], [[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(_CURSES_INCLUDES,   [[
 #ifndef is_pad
 void *x=is_pad
 #endif
@@ -4742,28 +4801,28 @@ void *x=is_pad
 )
 
 AC_MSG_CHECKING(for is_term_resized)
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <curses.h>]], [[void *x=is_term_resized]])],
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(_CURSES_INCLUDES,   [[void *x=is_term_resized]])],
   [AC_DEFINE(HAVE_CURSES_IS_TERM_RESIZED, 1, Define if you have the 'is_term_resized' function.)
    AC_MSG_RESULT(yes)],
   [AC_MSG_RESULT(no)]
 )
 
 AC_MSG_CHECKING(for resize_term)
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <curses.h>]], [[void *x=resize_term]])],
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(_CURSES_INCLUDES,   [[void *x=resize_term]])],
   [AC_DEFINE(HAVE_CURSES_RESIZE_TERM, 1, Define if you have the 'resize_term' function.)
    AC_MSG_RESULT(yes)],
   [AC_MSG_RESULT(no)]
 )
 
 AC_MSG_CHECKING(for resizeterm)
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <curses.h>]], [[void *x=resizeterm]])],
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(_CURSES_INCLUDES,   [[void *x=resizeterm]])],
   [AC_DEFINE(HAVE_CURSES_RESIZETERM, 1, Define if you have the 'resizeterm' function.)
    AC_MSG_RESULT(yes)],
   [AC_MSG_RESULT(no)]
 )
 
 AC_MSG_CHECKING(for immedok)
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <curses.h>]], [[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(_CURSES_INCLUDES,   [[
 #ifndef immedok
 void *x=immedok
 #endif
@@ -4774,7 +4833,7 @@ void *x=immedok
 )
 
 AC_MSG_CHECKING(for syncok)
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <curses.h>]], [[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(_CURSES_INCLUDES,   [[
 #ifndef syncok
 void *x=syncok
 #endif
@@ -4785,7 +4844,7 @@ void *x=syncok
 )
 
 AC_MSG_CHECKING(for wchgat)
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <curses.h>]], [[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(_CURSES_INCLUDES,   [[
 #ifndef wchgat
 void *x=wchgat
 #endif
@@ -4796,7 +4855,7 @@ void *x=wchgat
 )
 
 AC_MSG_CHECKING(for filter)
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <curses.h>]], [[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(_CURSES_INCLUDES,   [[
 #ifndef filter
 void *x=filter
 #endif
@@ -4807,7 +4866,7 @@ void *x=filter
 )
 
 AC_MSG_CHECKING(for has_key)
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <curses.h>]], [[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(_CURSES_INCLUDES,   [[
 #ifndef has_key
 void *x=has_key
 #endif
@@ -4818,7 +4877,7 @@ void *x=has_key
 )
 
 AC_MSG_CHECKING(for typeahead)
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <curses.h>]], [[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(_CURSES_INCLUDES,   [[
 #ifndef typeahead
 void *x=typeahead
 #endif
@@ -4829,7 +4888,7 @@ void *x=typeahead
 )
 
 AC_MSG_CHECKING(for use_env)
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <curses.h>]], [[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(_CURSES_INCLUDES,   [[
 #ifndef use_env
 void *x=use_env
 #endif
@@ -4838,6 +4897,17 @@ void *x=use_env
    AC_MSG_RESULT(yes)],
   [AC_MSG_RESULT(no)]
 )
+PY_CHECK_CURSES_FUNC([is_pad])
+PY_CHECK_CURSES_FUNC([is_term_resized])
+PY_CHECK_CURSES_FUNC([resize_term])
+PY_CHECK_CURSES_FUNC([resizeterm])
+PY_CHECK_CURSES_FUNC([immedok])
+PY_CHECK_CURSES_FUNC([syncok])
+PY_CHECK_CURSES_FUNC([wchgat])
+PY_CHECK_CURSES_FUNC([filter])
+PY_CHECK_CURSES_FUNC([has_key])
+PY_CHECK_CURSES_FUNC([typeahead])
+PY_CHECK_CURSES_FUNC([use_env])
 # last curses configure check
 CPPFLAGS=$ac_save_cppflags
 

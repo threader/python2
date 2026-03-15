@@ -298,7 +298,9 @@ class TestCurses(unittest.TestCase):
 
       #  curses.pair_content(curses.COLOR_PAIRS - 1)
       #  curses.pair_number(0)
+
     def test_init_color(self):
+        curses.start_color()
         if not curses.can_change_color():
             self.skipTest('cannot change color')
 
@@ -346,6 +348,7 @@ class TestCurses(unittest.TestCase):
      #   curses.pair_content(pair_limit)
 
     def test_pair_content(self):
+        curses.start_color()
         curses.pair_content(0)
         maxpair = self.get_pair_limit() - 1
         if maxpair > 0:
