@@ -4896,18 +4896,7 @@ void *x=use_env
   [AC_DEFINE(HAVE_CURSES_USE_ENV, 1, Define if you have the 'use_env' function.)
    AC_MSG_RESULT(yes)],
   [AC_MSG_RESULT(no)]
-)
-PY_CHECK_CURSES_FUNC([is_pad])
-PY_CHECK_CURSES_FUNC([is_term_resized])
-PY_CHECK_CURSES_FUNC([resize_term])
-PY_CHECK_CURSES_FUNC([resizeterm])
-PY_CHECK_CURSES_FUNC([immedok])
-PY_CHECK_CURSES_FUNC([syncok])
-PY_CHECK_CURSES_FUNC([wchgat])
-PY_CHECK_CURSES_FUNC([filter])
-PY_CHECK_CURSES_FUNC([has_key])
-PY_CHECK_CURSES_FUNC([typeahead])
-PY_CHECK_CURSES_FUNC([use_env])
+) 
 # last curses configure check
 CPPFLAGS=$ac_save_cppflags
 
