@@ -199,9 +199,9 @@ def as_completed(fs, timeout=None):
                 if f._state in [CANCELLED_AND_NOTIFIED, FINISHED])
         pending = fs - finished
         waiter = _create_and_install_waiters(fs, _AS_COMPLETED)
-
+    finished = list(finished)
     try:
-        yield from finished
+        yield finished
 
         while pending:
             if timeout is None:
@@ -220,6 +220,8 @@ def as_completed(fs, timeout=None):
                 waiter.finished_futures = []
                 waiter.event.clear()
 
+            # reverse to keep finishing order
+            finished.reverse()
             for future in finished:
                 yield future
                 pending.remove(future)
@@ -255,11 +257,11 @@ def wait(fs, timeout=None, return_when=ALL_COMPLETED):
         completed. The second set, named 'not_done', contains uncompleted
         futures.
     """
+    fs = set(fs)
     with _AcquireFutures(fs):
-        done = set(f for f in fs
-                   if f._state in [CANCELLED_AND_NOTIFIED, FINISHED])
-        not_done = set(fs) - done
-
+        done = {f for f in fs
+                   if f._state in [CANCELLED_AND_NOTIFIED, FINISHED]}
+        not_done = fs - done
         if (return_when == FIRST_COMPLETED) and done:
             return DoneAndNotDoneFutures(done, not_done)
         elif (return_when == FIRST_EXCEPTION) and done:
@@ -278,7 +280,19 @@ def wait(fs, timeout=None, return_when=ALL_COMPLETED):
             f._waiters.remove(waiter)
 
     done.update(waiter.finished_futures)
-    return DoneAndNotDoneFutures(done, set(fs) - done)
+    return DoneAndNotDoneFutures(done, fs - done)
+
+
+def _result_or_cancel(fut, timeout=None):
+    try:
+        try:
+            return fut.result(timeout)
+        finally:
+            fut.cancel()
+    finally:
+        # Break a reference cycle with the exception in self._exception
+        del fut
+
 
 class Future(object):
     """Represents the result of an asynchronous computation."""
@@ -354,8 +368,12 @@ class Future(object):
             return self._state in [CANCELLED, CANCELLED_AND_NOTIFIED, FINISHED]
 
     def __get_result(self):
-        if self._exception:
-            raise self._exception
+        if self._exception is not None:
+            try:
+                raise self._exception
+            finally:
+                # Break a reference cycle with the exception in self._exception
+                self = None
         else:
             return self._result
 
@@ -521,7 +539,7 @@ class Executor(object):
         """
         raise NotImplementedError()
 
-    def map(self, fn, *iterables, timeout=None, chunksize=1):
+    def map(self, fn, *iterables, timeout=None, chunksize=1, buffersize=None):
         """Returns an iterator equivalent to map(fn, iter).
 
         Args:
