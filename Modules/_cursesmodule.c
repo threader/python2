@@ -122,7 +122,7 @@ char *PyCursesVersion = "2.2";
 #undef columns
 #endif
 
-#if !defined(HAVE_NCURSES_H) && (defined(sgi) || defined(__sun) || defined(SCO5))
+#if !defined(HAVE_NCURSES_H) || !defined(NCURSES_VERSION)  && (defined(sgi) || defined(__sun) || defined(SCO5))
 #define STRICT_SYSV_CURSES       /* Don't use ncurses extensions */
 typedef chtype attr_t;           /* No attr_t type is available */
 #endif
@@ -924,6 +924,14 @@ PyCursesWindow_GetKey(PyCursesWindowObject *self, PyObject *args)
             PyErr_SetString(PyCursesError, "no input");
         return NULL;
     } else if (rtn<=255) {
+#ifdef NCURSES_VERSION_MAJOR
+#if NCURSES_VERSION_MAJOR*100+NCURSES_VERSION_MINOR <= 507
+        /* Work around a bug in ncurses 5.7 and earlier */
+        if (rtn < 0) {
+            rtn += 256;
+        }
+#endif
+#endif
         return Py_BuildValue("c", rtn);
     } else {
         const char *knp = keyname(rtn);
@@ -1765,15 +1773,13 @@ PyCurses_Color_Content(PyObject *self, PyObject *args)
     PyCursesInitialised;
     PyCursesInitialisedColor;
 
-    if (!PyArg_ParseTuple(args, Py_STRINGIFY(_COLOR_CONTENT_FUNC), &color)) return NULL;
-
-    if (_COLOR_CONTENT_FUNC(color, &r, &g, &b) != ERR)
-        return Py_BuildValue("(iii)", r, g, b);
-    else {
-        PyErr_SetString(PyCursesError,
-                        "Argument 1 was out of range. Check value of COLORS.");
+    if (_COLOR_CONTENT_FUNC(color, &r, &g, &b) == ERR) {
+       // const char *funcname = Py_STRINGIFY(_COLOR_CONTENT_FUNC);
+       // curses_set_error(module, funcname, "color_content");
         return NULL;
     }
+
+    return Py_BuildValue("(iii)", r, g, b);
 }
 
 static PyObject *
@@ -1784,8 +1790,9 @@ PyCurses_color_pair(PyObject *self, PyObject *args)
     PyCursesInitialised;
     PyCursesInitialisedColor;
 
-    if (!PyArg_ParseTuple(args, "i:color_pair", &n)) return NULL;
-    return PyLong_FromLong((long) (n << 8));
+     if (!PyArg_ParseTuple(args, "i:color_pair", &n)) return NULL;
+  //  return  PyLong_FromLong(COLOR_PAIR(n << 8)); 
+   return PyLong_FromLong((long) (n << 8));
 }
 
 static PyObject *
@@ -1966,15 +1973,20 @@ PyCurses_Init_Pair(PyObject *self, PyObject *args)
     PyCursesInitialised;
     PyCursesInitialisedColor;
 
-
-    if (PyTuple_Size(args) != 3) {
-        PyErr_SetString(PyExc_TypeError, "init_pair requires 3 arguments");
+    if (_CURSES_INIT_PAIR_FUNC(pair, f, b) == ERR) {
+        if (pair >= COLOR_PAIRS) {
+            PyErr_Format(PyExc_ValueError,
+                         "Color pair is greater than COLOR_PAIRS-1 (%d).",
+                         COLOR_PAIRS - 1);
+        }     
+	else { 
+	// if (!PyArg_ParseTuple(args, "hhh;pair, f, b", &pair, &f, &b)) return NULL;
+    	 return PyCursesCheckERR(_CURSES_INIT_PAIR_FUNC(pair, f, b), Py_STRINGIFY(_CURSES_INIT_PAIR_FUNC));
+	}   
         return NULL;
     }
 
-    if (!PyArg_ParseTuple(args, "hhh;pair, f, b", &pair, &f, &b)) return NULL;
-
-    return PyCursesCheckERR(_CURSES_INIT_PAIR_FUNC(pair, f, b), Py_STRINGIFY(_CURSES_INIT_PAIR_FUNC));
+    Py_RETURN_NONE;
 }
 
 static PyObject *ModDict;
@@ -2003,7 +2015,7 @@ PyCurses_InitScr(PyObject *self)
    where they're not defined until you've called initscr() */
 #define SetDictInt(string,ch)                                           \
     do {                                                                \
-        PyObject *o = PyLong_FromLong((long) (ch));                      \
+        PyObject *o = PyInt_FromLong((long) (ch));                      \
         if (o && PyDict_SetItemString(ModDict, string, o) == 0)     {   \
             Py_DECREF(o);                                               \
         }                                                               \
@@ -2133,6 +2145,10 @@ PyCurses_setupterm(PyObject* self, PyObject *args, PyObject* keywds)
     Py_INCREF(Py_None);
     return Py_None;
 }
+
+// #if defined(NCURSES_EXT_FUNCS) && NCURSES_EXT_FUNCS >= 20081102
+// https://invisible-island.net/ncurses/NEWS.html#index-t20080119
+
 
 static PyObject *
 PyCurses_IntrFlush(PyObject *self, PyObject *args)
@@ -2318,23 +2334,18 @@ PyCurses_NewWindow(PyObject *self, PyObject *args)
 static PyObject *
 PyCurses_Pair_Content(PyObject *self, PyObject *args)
 {
-    short pair,f,b;
+	int pair;
+    _CURSES_COLOR_NUM_TYPE f,b;
 
     PyCursesInitialised;
     PyCursesInitialisedColor;
 
-    switch(PyTuple_Size(args)) {
-    case 1:
-        if (!PyArg_ParseTuple(args, "h;pair", &pair)) return NULL;
-        break;
-    default:
-        PyErr_SetString(PyExc_TypeError, "pair_content requires 1 argument");
-        return NULL;
-    }
-
-    if (pair_content(pair, &f, &b)==ERR) {
-        PyErr_SetString(PyCursesError,
-                        "Argument 1 was out of range. (1..COLOR_PAIRS-1)");
+    if (_CURSES_PAIR_CONTENT_FUNC(pair, &f, &b) == ERR) {
+        if (pair >= COLOR_PAIRS) {
+            PyErr_Format(PyExc_ValueError,
+                         "Color pair is greater than COLOR_PAIRS-1 (%d).",
+                         COLOR_PAIRS - 1);
+        }
         return NULL;
     }
 
@@ -2520,7 +2531,8 @@ PyCurses_Start_Color(PyObject *self)
     if (start_color() == ERR) {
         PyErr_SetString(PyCursesError, "start_color() returned ERR");
         return NULL;
-    } else {
+    }
+
         initialisedcolors = TRUE;
 #if 0
         c = PyInt_FromLong((long) COLORS);
@@ -2533,9 +2545,7 @@ PyCurses_Start_Color(PyObject *self)
 #endif
 //    PyObject *ModDict = PyModule_GetDict(module); // borrowed
 
-
-	long pair_number = COLOR_PAIRS;
-	long color_number = COLORS;
+	_CURSES_COLOR_VAL_TYPE color_number;
 	int overflow;
 
 
@@ -2553,60 +2563,60 @@ PyCurses_Start_Color(PyObject *self)
         }                                                           \
     } while (0)
 
-
-    //color_number = PyLong_AsLongAndOverflow(args, &overflow);
+    // PyLong_AsLongAndOverflow(color_number, &overflow);
    // if (color_number == -1 && PyErr_Occurred())
-     //   return 0;
-
-    if (overflow > 0 || color_number >= COLORS) {
+   //     return NULL;
+#if _NCURSES_EXTENDED_COLOR_FUNCS
+    if ((_CURSES_COLOR_VAL_TYPE)color_number >= COLORS) {
         PyErr_Format(PyExc_ValueError,
                      "Color number is greater than COLORS-1 (%d).",
                      COLORS - 1);
-        return 0;
+        return NULL;
+   } 
+#else
+	if ((_CURSES_COLOR_VAL_TYPE)color_number < 0) {
+        PyErr_SetString(PyExc_ValueError,
+                        "Color number is less than 0.");
+        return NULL;
     }
-    else if (overflow < 0 || color_number < 0) {
+#endif
+    else if ((_CURSES_COLOR_VAL_TYPE)color_number < 0) {
         color_number = -1;
+        PyErr_SetString(PyExc_ValueError,
+                        "Color number is less than 0.");
+        return NULL;
+
     }
-	COLORS = (_CURSES_COLOR_VAL_TYPE)color_number;
 
-   DICT_ADD_INT_VALUE("COLORS", COLORS);       
+   DICT_ADD_INT_VALUE("COLORS", (_CURSES_COLOR_VAL_TYPE)COLORS);       
 
-
-   // pair_number = PyLong_AsLongAndOverflow(args, &overflow);
-    //if (pair_number == -1 && PyErr_Occurred())
-     //   return 0;
 
 #if _NCURSES_EXTENDED_COLOR_FUNCS
-    if (overflow > 0 || pair_number > INT_MAX) {
+    if (COLOR_PAIRS > INT_MAX) {
         PyErr_Format(PyExc_ValueError,
                      "Color pair is greater than maximum (%d).",
                      INT_MAX);
-        return 0;
+        return NULL;
     }
 #else
-    if (overflow > 0 || pair_number >= COLOR_PAIRS) {
+    if (int)pair_number >= COLOR_PAIRS) {
         PyErr_Format(PyExc_ValueError,
                      "Color pair is greater than COLOR_PAIRS-1 (%d).",
                      COLOR_PAIRS - 1);
-        return 0;
+        return NULL;
     }
 #endif
-    else if (overflow < 0 || pair_number < 0) {
+    else if (COLOR_PAIRS < 0) {
         PyErr_SetString(PyExc_ValueError,
                         "Color pair is less than 0.");
-        return 0;
+        return NULL;
     }
 
-    COLOR_PAIRS = (int)pair_number;
-
-
-   DICT_ADD_INT_VALUE("COLOR_PAIRS", COLOR_PAIRS);
+   DICT_ADD_INT_VALUE("COLOR_PAIRS", (int)COLOR_PAIRS);
 
 #undef DICT_ADD_INT_VALUE
-     Py_INCREF(Py_None);  
-        return Py_None;
-  }
 
+        return Py_None;
 }
 
 static PyObject *
@@ -2780,6 +2790,41 @@ PyCurses_Use_Default_Colors(PyObject *self)
         return NULL;
     }
 }
+
+/*[clinic input]
+_curses.assume_default_colors
+    fg: int
+    bg: int
+    /
+
+Allow use of default values for colors on terminals supporting this feature.
+
+Assign terminal default foreground/background colors to color number -1.
+Change the definition of the color-pair 0 to (fg, bg).
+
+Use this to support transparency in your application.
+[clinic start generated code]*/
+
+static PyObject *
+_curses_assume_default_colors_impl(PyObject *module,  int fg, int bg)
+/*[clinic end generated code: output=54985397a7d2b3a5 input=7fe301712ef3e9fb]*/
+{
+    int code;
+
+
+    PyCursesInitialised;
+    PyCursesInitialisedColor;
+
+    code = assume_default_colors(fg, bg);
+    if (code != ERR) {
+        Py_INCREF(Py_None);
+        return Py_None;
+    } else {
+        PyErr_SetString(PyCursesError, "assume_default_colors() returned ERR");
+        return NULL;
+    }
+}
+
 #endif /* STRICT_SYSV_CURSES */
 
 #ifdef NCURSES_VERSION
@@ -2859,6 +2904,8 @@ static PyMethodDef PyCurses_methods[] = {
     {"beep",                (PyCFunction)PyCurses_beep, METH_NOARGS},
     {"can_change_color",    (PyCFunction)PyCurses_can_change_color, METH_NOARGS},
     {"cbreak",              (PyCFunction)PyCurses_cbreak, METH_VARARGS},
+    {"assume_default_colors", (PyCFunction)_curses_assume_default_colors_impl, METH_NOARGS},
+    {"has_extended_color_support", (PyCFunction)_curses_has_extended_color_support, METH_NOARGS},
     {"color_content",       (PyCFunction)PyCurses_Color_Content, METH_VARARGS},
     {"color_pair",          (PyCFunction)PyCurses_color_pair, METH_VARARGS},
     {"curs_set",            (PyCFunction)PyCurses_Curs_Set, METH_VARARGS},

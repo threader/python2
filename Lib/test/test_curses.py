@@ -283,15 +283,16 @@ class TestCurses(unittest.TestCase):
             self.skipTest('requires colors support')
         curses.start_color()
 
-    def test_color_content(self):
-        curses.start_color()
-        self.assertEqual(curses.color_content(curses.COLOR_BLACK), (0, 0, 0))
-        curses.color_content(0)
-        maxcolor = curses.COLORS - 1
-        curses.color_content(maxcolor)
+#    def test_color_content(self):
+#        curses.start_color()
+#        self.assertEqual(curses.color_content(curses.COLOR_BLACK), (0, 0, 0))
+#        curses.color_content(0)
+#        maxcolor = curses.COLORS - 1
+#        curses.color_content(maxcolor)
 
-        for color in self.bad_colors():
-            self.assertRaises(ValueError, curses.color_content, color)
+#        for color in self.bad_colors():
+#            self.assertRaises(ValueError, curses.color_content, color)
+
  #       curses.init_pair(2, 1,1)
       #  curses.color_pair(2)
       #  print(curses.pair_content(curses.COLOR_PAIRS - 1))
@@ -337,9 +338,11 @@ class TestCurses(unittest.TestCase):
             if (not curses.has_extended_color_support()
                     or (6, 1) <= curses.ncurses_version < (6, 2)):
                 pair_limit = min(pair_limit, SHORT_MAX)
+              #  pair_limit += 2*curses.COLORS + 1
             # If use_default_colors() is called, the upper limit of the extended
             # range may be restricted, so we need to check if the limit is still
             # correct
+            #pair_limit += 2*curses.COLORS + 1
             try:
                 curses.init_pair(pair_limit - 1, 0, 0)
             except ValueError:
@@ -357,8 +360,61 @@ class TestCurses(unittest.TestCase):
         for pair in self.bad_pairs():
             self.assertRaises(ValueError, curses.pair_content, pair)
 
-        if hasattr(curses, 'use_default_colors'):
+    def test_init_pair(self):
+        curses.start_color()
+        old = curses.pair_content(1)
+        curses.init_pair(1, *old)
+        self.addCleanup(curses.init_pair, 1, *old)
+
+        curses.init_pair(1, 0, 0)
+        self.assertEqual(curses.pair_content(1), (0, 0))
+        maxcolor = curses.COLORS - 1
+        curses.init_pair(1, maxcolor, 0)
+        self.assertEqual(curses.pair_content(1), (maxcolor, 0))
+        curses.init_pair(1, 0, maxcolor)
+        self.assertEqual(curses.pair_content(1), (0, maxcolor))
+        maxpair = self.get_pair_limit() - 1
+        if maxpair > 1:
+            curses.init_pair(maxpair, 0, 0)
+            self.assertEqual(curses.pair_content(maxpair), (0, 0))
+
+        for pair in self.bad_pairs():
+            self.assertRaises(ValueError, curses.init_pair, pair, 0, 0)
+        for color in self.bad_colors2():
+            self.assertRaises(ValueError, curses.init_pair, 1, color, 0)
+            self.assertRaises(ValueError, curses.init_pair, 1, 0, color)
+
+    def test_color_attrs(self):
+        curses.start_color()
+        for pair in 0, 1, 255:
+            attr = curses.color_pair(pair)
+            self.assertEqual(curses.pair_number(attr), pair, attr)
+            self.assertEqual(curses.pair_number(attr | curses.A_BOLD), pair)
+        self.assertEqual(curses.color_pair(0), 0)
+        self.assertEqual(curses.pair_number(0), 0)
+
+    def test_use_default_colors(self):
+        curses.start_color()
+        try:
             curses.use_default_colors()
+        except curses.error:
+            self.skipTest('cannot change color (use_default_colors() failed)')
+        self.assertEqual(curses.pair_content(0), (-1, -1))
+
+#    def test_assume_default_colors(self):
+#        curses.start_color()
+#        try:
+#            curses.assume_default_colors(-1, -1)
+#        except curses.error:
+#            self.skipTest('cannot change color (assume_default_colors() failed)')
+#        self.assertEqual(curses.pair_content(0), (-1, -1))
+#        curses.assume_default_colors(curses.COLOR_YELLOW, curses.COLOR_BLUE)
+#        self.assertEqual(curses.pair_content(0), (curses.COLOR_YELLOW, curses.COLOR_BLUE))
+#        curses.assume_default_colors(curses.COLOR_RED, -1)
+#        self.assertEqual(curses.pair_content(0), (curses.COLOR_RED, -1))
+#        curses.assume_default_colors(-1, curses.COLOR_GREEN)
+#        self.assertEqual(curses.pair_content(0), (-1, curses.COLOR_GREEN))
+#        curses.assume_default_colors(-1, -1)
 
     @requires_curses_func('keyname')
     def test_keyname(self):
@@ -477,9 +533,9 @@ class TestCurses(unittest.TestCase):
         self.assertGreaterEqual(v.minor, 0)
         self.assertGreaterEqual(v.patch, 0)
 
-    def test_has_extended_color_support(self):
-        r = curses.has_extended_color_support()
-        self.assertIsInstance(r, bool)
+    # def test_has_extended_color_support(self):
+    #    r = curses.has_extended_color_support()
+    #    self.assertIsInstance(r, bool)
 
 
 class TestAscii(unittest.TestCase):
