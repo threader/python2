@@ -46,16 +46,27 @@
 #define NCURSES_OPAQUE 0
 #endif
 
-#ifdef HAVE_NCURSES_H
-#include <ncurses.h>
-#else
-#include <curses.h>
+#if defined(HAVE_NCURSESW_NCURSES_H)
+#  include <ncursesw/ncurses.h>
+#elif defined(HAVE_NCURSESW_CURSES_H)
+#  include <ncursesw/curses.h>
+#elif defined(HAVE_NCURSES_NCURSES_H)
+#  include <ncurses/ncurses.h>
+#elif defined(HAVE_NCURSES_CURSES_H)
+#  include <ncurses/curses.h>
+#elif defined(HAVE_NCURSES_H)
+#  include <ncurses.h>
+#elif defined(HAVE_CURSES_H)
+#  include <curses.h>
 #endif
 
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES_H || NCURSES_VERSION
 /* configure was checking <curses.h>, but we will
    use <ncurses.h>, which has some or all these features. */
-#if !defined(WINDOW_HAS_FLAGS) && !(NCURSES_OPAQUE+0)
+#if !defined(WINDOW_HAS_FLAGS) && \
+    (NCURSES_VERSION_PATCH+0 < 20070303 || !(NCURSES_OPAQUE+0))
+/* the WINDOW flags field was always accessible in ncurses prior to 20070303;
+   after that, it depends on the value of NCURSES_OPAQUE. */
 #define WINDOW_HAS_FLAGS 1
 #endif
 #if !defined(HAVE_CURSES_IS_PAD) && NCURSES_VERSION_PATCH+0 >= 20090906
