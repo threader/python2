@@ -26,7 +26,7 @@
  * Peters, Guido van Rossum, Ka-Ping Yee, Sjoerd Mullender, and
  * probably one or two others that I'm forgetting.
  *
- * $Id$ */
+ * $Id: regexpr.c,v 1.33 2000/07/21 06:00:07 twouters Exp $ */
 
 #include "Python.h"
 #include "regexpr.h"

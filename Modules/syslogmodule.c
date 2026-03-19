@@ -47,11 +47,15 @@ Revision history:
 #include "Python.h"
 
 #include <syslog.h>
+#if defined(AMITCP) || defined(INET225)
+#include <proto/socket.h>
+#endif
 
 /*  only one instance, only one syslog, so globals should be ok  */
 static PyObject *S_ident_o = NULL;			/*  identifier, held by openlog()  */
 
 
+#ifndef INET225
 static PyObject * 
 syslog_openlog(PyObject * self, PyObject * args)
 {
@@ -75,6 +79,7 @@ syslog_openlog(PyObject * self, PyObject * args)
 	Py_INCREF(Py_None);
 	return Py_None;
 }
+#endif /* !INET225 */
 
 
 static PyObject * 
@@ -96,6 +101,7 @@ syslog_syslog(PyObject * self, PyObject * args)
 	return Py_None;
 }
 
+#ifndef INET225
 static PyObject * 
 syslog_closelog(PyObject *self, PyObject *args)
 {
@@ -152,6 +158,19 @@ static PyMethodDef syslog_methods[] = {
 	{"LOG_UPTO",	syslog_log_upto,	METH_VARARGS},
 	{NULL,		NULL,			0}
 };
+
+#endif /* !INET225 */
+
+#ifdef INET225
+/* List of functions defined in the module */
+/* I-Net 225 only has syslog */
+
+static PyMethodDef syslog_methods[] = {
+	{"syslog",	syslog_syslog,		METH_VARARGS},
+	{NULL,		NULL,			0}
+};
+#endif /* INET225 */
+
 
 /* helper function for initialization function */
 

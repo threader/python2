@@ -38,7 +38,9 @@ extern DL_IMPORT(PyTypeObject) PyCode_Type;
 #define CO_MAXBLOCKS 20 /* Max static block nesting within a function */
 
 /* Public interface */
+#ifndef __SASC
 struct _node; /* Declare the existence of this type */
+#endif
 DL_IMPORT(PyCodeObject *) PyNode_Compile(struct _node *, char *);
 DL_IMPORT(PyCodeObject *) PyCode_New(
 	int, int, int, int, PyObject *, PyObject *, PyObject *, PyObject *,

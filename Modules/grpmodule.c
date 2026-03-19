@@ -6,6 +6,13 @@
 #include <sys/types.h>
 #include <grp.h>
 
+#ifdef AMITCP
+#include <proto/usergroup.h>
+#endif
+#ifdef INET225
+#include <proto/socket.h>
+#endif
+
 
 static PyObject *
 mkgrent(struct group *p)
@@ -77,6 +84,7 @@ grp_getgrall(PyObject *self, PyObject *args)
         return NULL;
     if ((d = PyList_New(0)) == NULL)
         return NULL;
+#if !defined(AMITCP) && !defined(INET225)
     setgrent();
     while ((p = getgrent()) != NULL) {
         PyObject *v = mkgrent(p);
@@ -88,6 +96,25 @@ grp_getgrall(PyObject *self, PyObject *args)
         Py_DECREF(v);
     }
     return d;
+#else
+ #ifdef AMITCP
+	setgrent();
+ #else
+    setgrent(1); /* INET225 wants argument XXX correct? */
+ #endif
+	while ((p = getgrent()) != NULL) {
+		PyObject *v = mkgrent(p);
+		if (v == NULL || PyList_Append(d, v) != 0) {
+			Py_XDECREF(v);
+			Py_DECREF(d);
+			endgrent();
+			return NULL;
+		}
+		Py_DECREF(v);
+	}
+	endgrent();
+	return d;
+#endif /* AMITCP or INET225 */
 }
 
 static PyMethodDef grp_methods[] = {

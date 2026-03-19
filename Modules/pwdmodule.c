@@ -6,6 +6,13 @@
 #include <sys/types.h>
 #include <pwd.h>
 
+#ifdef AMITCP
+#include <proto/usergroup.h>
+#endif
+#ifdef INET225
+#include <proto/socket.h>
+#endif
+
 static char pwd__doc__ [] = "\
 This module provides access to the Unix password database.\n\
 It is available on all Unix versions.\n\
@@ -92,6 +99,7 @@ pwd_getpwall(PyObject *self, PyObject *args)
 		return NULL;
 	if ((d = PyList_New(0)) == NULL)
 		return NULL;
+#if !defined(AMITCP) && !defined(INET225)
 	setpwent();
 	while ((p = getpwent()) != NULL) {
 		PyObject *v = mkpwent(p);
@@ -103,6 +111,25 @@ pwd_getpwall(PyObject *self, PyObject *args)
 		Py_DECREF(v);
 	}
 	return d;
+#else
+ #ifdef AMITCP
+	setpwent();
+ #else 
+	setpwent(1); /* INET225 wants argument XXX correct? - I.J. */
+ #endif
+	while ((p = getpwent()) != NULL) {
+		PyObject *v = mkpwent(p);
+		if (v == NULL || PyList_Append(d, v) != 0) {
+			Py_XDECREF(v);
+			Py_DECREF(d);
+			endpwent();
+			return NULL;
+		}
+		Py_DECREF(v);
+	}
+	endpwent();
+	return d;
+#endif /* AMITCP or INET225 */
 }
 #endif
 

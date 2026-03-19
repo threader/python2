@@ -39,6 +39,10 @@
 #include <fcntl.h>
 #endif
 
+#ifdef _AMIGA
+#include <proto/dos.h>
+#endif
+
 #if defined(PYCC_VACPP)
 /* VisualAge C/C++ Failed to Define MountType Field in sys/stat.h */
 #define S_IFMT (S_IFDIR|S_IFCHR|S_IFREG)
@@ -951,6 +955,11 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 			return &resfiledescr;
 		}
 #endif
+#ifdef _AMIGA
+		/* Use the dos.library to construct the pathname */
+		AddPart(buf,name,MAXPATHLEN);
+		len=strlen(buf);
+#else /* !_AMIGA */
 		if (len > 0 && buf[len-1] != SEP
 #ifdef ALTSEP
 		    && buf[len-1] != ALTSEP
@@ -974,6 +983,7 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 			strcpy(buf+len, name);
 			len += namelen;
 		}
+#endif /* !_AMIGA */
 #ifdef HAVE_STAT
 		if (stat(buf, &statbuf) == 0) {
 			if (S_ISDIR(statbuf.st_mode)) {
@@ -1162,6 +1172,41 @@ check_case(char *buf, int len, int namelen, char *name)
 	return 1;
 }
 #endif
+
+#ifdef _AMIGA
+static int
+check_case(char *buf, int len, int namelen, char *name)
+{
+	BPTR lock;
+	struct FileInfoBlock __aligned fib;
+	char tmpbuf[200];
+
+	if(GetVar("PYTHONCASEOK",tmpbuf,200,NULL)>=0)
+		return 1;
+
+	if(lock=Lock(buf,ACCESS_READ))
+	{
+		if(Examine(lock,&fib))
+		{
+			UnLock(lock);
+			if (strncmp(fib.fib_FileName, name, namelen) != 0)
+			{
+				strcpy(buf+len-namelen, fib.fib_FileName);
+				PyErr_Format(PyExc_NameError,
+				  "Case mismatch for module name %.100s\n(filename %.300s)",
+				  name, buf);
+				return 0;
+			}
+			return 1;
+		}
+		UnLock(lock);
+	}
+	PyErr_Format(PyExc_NameError,
+	  "Can't find file for module %.100s\n(filename %.300s)",
+	  name, buf);
+	return 0;
+}
+#endif /* _AMIGA */
 
 #endif /* CHECK_IMPORT_CASE */
 

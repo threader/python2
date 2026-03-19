@@ -5,6 +5,18 @@
 
 #include <sys/types.h>
 
+#ifdef AMITCP
+#include <proto/usergroup.h>
+#endif
+#ifdef INET225
+#include <proto/socket.h>
+static __inline STRPTR crypt(STRPTR pw, STRPTR un)
+{
+	static char buf[32];
+	return s_crypt(buf,pw,un);
+}
+#endif
+
 
 /* Module crypt */
 

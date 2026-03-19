@@ -96,6 +96,10 @@ Socket methods:
 #include "pythread.h"
 #endif
 
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -139,6 +143,12 @@ Socket methods:
 #else
 #include <winsock.h>
 #include <fcntl.h>
+#endif
+#if defined(AMITCP) || defined(INET225)
+#define SYS_TTYCHARS_H
+#include <sys/ioctl.h>
+#include <proto/socket.h>
+typedef LONG socklen_t;
 #endif
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
@@ -188,6 +198,23 @@ typedef int SOCKET_T;
 #if defined(PYOS_OS2)
 #define SOCKETCLOSE soclose
 #define NO_DUP /* Sockets are Not Actual File Handles under OS/2 */
+#endif
+
+#ifdef AMITCP
+/* seem to be a few differences in the API */
+//#define close CloseSocket
+#define ioctlsocket IoctlSocket
+#undef NO_DUP
+#undef AF_UNIX
+#endif
+
+#ifdef INET225
+/* seem to be a few differences in the API */
+#define close s_close
+#define ioctlsocket s_ioctl
+#undef NO_DUP
+static __inline int dup(int oldsd) { return s_dup(oldsd); }
+#undef AF_UNIX
 #endif
 
 #ifndef SOCKETCLOSE
@@ -397,6 +424,16 @@ PySocketSock_New(SOCKET_T fd, int family, int type, int proto)
 		s->sock_family = family;
 		s->sock_type = type;
 		s->sock_proto = proto;
+#if defined(AMITCP) || defined (INET225)
+		/* Amiga's TCP stacks want a zeroed out sock_addr structure */
+		memset(&s->sock_addr, 0, sizeof(s->sock_addr));
+#ifdef AMITCP
+		if(family==AF_INET) s->sock_addr.in.sin_len=sizeof(struct sockaddr_in);
+#ifdef AF_UNIX
+		if(family==AF_UNIX) s->sock_addr.un.sun_len=sizeof(struct sockaddr_un);
+#endif /* AF_UNIX */
+#endif /* AMITCP */
+#endif /* AMITCP || INET225 */
 	}
 	return s;
 }
@@ -737,12 +774,17 @@ PySocketSock_setblocking(PySocketSockObject *s, PyObject *args)
 	block = !block;
 	ioctl(s->sock_fd, FIONBIO, (caddr_t)&block, sizeof(block));
 #else /* !PYOS_OS2 */
+ #if defined(AMITCP) || defined (INET225)
+	block = !block;
+	ioctlsocket(s->sock_fd, FIONBIO, &block);
+ #else
 	delay_flag = fcntl (s->sock_fd, F_GETFL, 0);
 	if (block)
 		delay_flag &= (~O_NDELAY);
 	else
 		delay_flag |= O_NDELAY;
 	fcntl (s->sock_fd, F_SETFL, delay_flag);
+ #endif /* !AMITCP || INET225 */
 #endif /* !PYOS_OS2 */
 #else /* MS_WINDOWS */
 	block = !block;

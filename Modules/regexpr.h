@@ -24,7 +24,7 @@ extern "C" {
  * Last modified: Mon Nov  4 15:49:46 1991 ylo
  */
 
-/* $Id$ */
+/* $Id: regexpr.h,v 1.13 2000/07/16 12:04:31 twouters Exp $ */
 
 #ifndef REGEXPR_H
 #define REGEXPR_H

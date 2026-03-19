@@ -17,6 +17,7 @@ Data members:
 #include "Python.h"
 
 #include "osdefs.h"
+#include "protos.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -657,6 +658,14 @@ PySys_SetArgv(int argc, char **argv)
 				n--; /* Drop trailing separator */
 #endif /* Unix */
 		}
+#ifdef _AMIGA
+		else
+		{
+			/* check for absolute paths on Amiga */
+			if(argc>0 && argv0!=NULL) p=strrchr(argv0,':');
+			if(p!=NULL)     n=p+1-argv0;
+		}
+#endif /* _AMIGA */
 #endif /* All others */
 		a = PyString_FromStringAndSize(argv0, n);
 		if (a == NULL)

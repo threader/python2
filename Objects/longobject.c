@@ -1687,7 +1687,11 @@ PyTypeObject PyLong_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,
 	"long int",
+#ifdef __SASC
+	sizeof(struct _longobject) - sizeof(digit),
+#else
 	sizeof(PyLongObject) - sizeof(digit),
+#endif
 	sizeof(digit),
 	(destructor)long_dealloc,	/*tp_dealloc*/
 	0,				/*tp_print*/

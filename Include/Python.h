@@ -50,6 +50,27 @@
 #include <stdlib.h>
 #endif
 #include <assert.h>
+#ifdef _AMIGA
+# ifdef HAVE_FCNTL_H
+#  include <fcntl.h>
+# endif
+# if !defined(AMITCP) && !defined(INET225)
+#  include <stat.h>
+typedef unsigned long pid_t;
+# endif
+#endif
+/* Include proper Amiga SAS/C math include files */
+#ifdef __SASC
+#if defined(_IEEE) && !defined(_M68881)
+#include <mieeedoub.h>
+#endif
+#ifdef _FFP
+#include <mffp.h>
+#endif
+#ifdef _M68881
+#include <m68881.h>
+#endif
+#endif
 
 #include "pyport.h"
 

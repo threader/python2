@@ -41,6 +41,10 @@ extern void bzero(void *, int);
 #endif
 #endif
 
+#if defined(AMITCP) || defined(INET225)
+#include <proto/socket.h>
+#endif
+
 static PyObject *SelectError;
 
 /* list of Python objects and their file descriptor */
@@ -161,6 +165,148 @@ set2list(fd_set *set, pylist fd2obj[FD_SETSIZE + 3])
 	return NULL;
 }
 
+
+#if defined(AMITCP) || defined(INET225)
+/* Amiga's version of select: WaitSelect()/selectwait() support */
+/* (additional 5th parameter: signal waitmask) */
+static PyObject *
+select_select(PyObject *self, PyObject *args)
+{
+#if defined (MS_WINDOWS) || defined (_AMIGA)
+	/* This would be an awful lot of stack space on Windows! */
+	pylist *rfd2obj, *wfd2obj, *efd2obj;
+#else
+	pylist rfd2obj[FD_SETSIZE + 3];
+	pylist wfd2obj[FD_SETSIZE + 3];
+	pylist efd2obj[FD_SETSIZE + 3];
+#endif
+	PyObject *ifdlist, *ofdlist, *efdlist;
+	PyObject *ret = NULL;
+	PyObject *tout = Py_None;
+	fd_set ifdset, ofdset, efdset;
+	double timeout;
+	struct timeval tv, *tvp;
+	int seconds;
+	int imax, omax, emax, max;
+	int n;
+	ULONG waitmask=0;
+	BOOL do_waitmask = FALSE;
+
+	/* convert arguments */
+	if (!PyArg_ParseTuple(args, "OOO|Oi",
+			      &ifdlist, &ofdlist, &efdlist, &tout, &waitmask))
+		return NULL;
+
+	if (tout == Py_None)
+		tvp = (struct timeval *)0;
+	else if (!PyArg_Parse(tout, "d", &timeout)) {
+		PyErr_SetString(PyExc_TypeError,
+				"timeout must be a float or None");
+		return NULL;
+	}
+	else {
+		seconds = (int)timeout;
+		timeout = timeout - (double)seconds;
+		tv.tv_sec = seconds;
+		tv.tv_usec = (int)(timeout*1000000.0);
+		tvp = &tv;
+	}
+
+	if(waitmask) do_waitmask=TRUE;
+
+	/* sanity check first three arguments */
+	if (!PyList_Check(ifdlist) ||
+	    !PyList_Check(ofdlist) ||
+	    !PyList_Check(efdlist))
+	{
+		PyErr_SetString(PyExc_TypeError,
+				"arguments 1-3 must be lists");
+		return NULL;
+	}
+
+#if defined(MS_WINDOWS) || defined (_AMIGA)
+	/* Allocate memory for the lists */
+	rfd2obj = PyMem_NEW(pylist, FD_SETSIZE + 3);
+	wfd2obj = PyMem_NEW(pylist, FD_SETSIZE + 3);
+	efd2obj = PyMem_NEW(pylist, FD_SETSIZE + 3);
+	if (rfd2obj == NULL || wfd2obj == NULL || efd2obj == NULL) {
+		if (rfd2obj) PyMem_DEL(rfd2obj);
+		if (wfd2obj) PyMem_DEL(wfd2obj);
+		if (efd2obj) PyMem_DEL(efd2obj);
+		return NULL;
+	}
+#endif
+	/* Convert lists to fd_sets, and get maximum fd number
+	 * propagates the Python exception set in list2set()
+	 */
+	rfd2obj[0].sentinel = -1;
+	wfd2obj[0].sentinel = -1;
+	efd2obj[0].sentinel = -1;
+	if ((imax=list2set(ifdlist, &ifdset, rfd2obj)) < 0) 
+		goto finally;
+	if ((omax=list2set(ofdlist, &ofdset, wfd2obj)) < 0) 
+		goto finally;
+	if ((emax=list2set(efdlist, &efdset, efd2obj)) < 0) 
+		goto finally;
+	max = imax;
+	if (omax > max) max = omax;
+	if (emax > max) max = emax;
+
+	Py_BEGIN_ALLOW_THREADS
+#ifdef AMITCP
+	n = WaitSelect(max, &ifdset, &ofdset, &efdset, tvp, &waitmask);
+#else /* INET225 */
+	n = selectwait(max, &ifdset, &ofdset, &efdset, tvp, &waitmask);
+#endif	
+	Py_END_ALLOW_THREADS
+
+	if (n < 0) {
+		PyErr_SetFromErrno(SelectError);
+	}
+	else if (n == 0) {
+                /* optimization */
+		ifdlist = PyList_New(0);
+		if (ifdlist) {
+			if(do_waitmask) ret=Py_BuildValue("OOOi", ifdlist, ifdlist, ifdlist, waitmask);
+			else ret = Py_BuildValue("OOO", ifdlist, ifdlist, ifdlist);
+			Py_DECREF(ifdlist);
+		}
+	}
+	else {
+		/* any of these three calls can raise an exception.  it's more
+		   convenient to test for this after all three calls... but
+		   is that acceptable?
+		*/
+		ifdlist = set2list(&ifdset, rfd2obj);
+		ofdlist = set2list(&ofdset, wfd2obj);
+		efdlist = set2list(&efdset, efd2obj);
+		if (PyErr_Occurred())
+			ret = NULL;
+		else
+		{
+			if(do_waitmask) ret=Py_BuildValue("OOOi", ifdlist, ofdlist, efdlist, waitmask);
+			else ret = Py_BuildValue("OOO", ifdlist, ofdlist, efdlist);
+		}
+
+		Py_DECREF(ifdlist);
+		Py_DECREF(ofdlist);
+		Py_DECREF(efdlist);
+	}
+	
+  finally:
+	reap_obj(rfd2obj);
+	reap_obj(wfd2obj);
+	reap_obj(efd2obj);
+#if defined(MS_WINDOWS) || defined (_AMIGA)
+	PyMem_DEL(rfd2obj);
+	PyMem_DEL(wfd2obj);
+	PyMem_DEL(efd2obj);
+#endif
+	return ret;
+}
+
+#else /* ! AMITCP || INET225 */
+/* This is the select function for all other platforms */
     
 static PyObject *
 select_select(PyObject *self, PyObject *args)
@@ -289,6 +435,9 @@ select_select(PyObject *self, PyObject *args)
 #endif
 	return ret;
 }
+
+#endif /* !AMITCP || INET225 */
+
 
 #ifdef HAVE_POLL
 /* 

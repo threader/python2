@@ -175,11 +175,25 @@ PyOS_FiniInterrupts(void)
 int
 PyOS_InterruptOccurred(void)
 {
+#ifdef __SASC
+	extern void __regargs __chkabort(void);
+	extern void chkabort(void);
+
+	chkabort();		/* explicit Amiga SAS/C ^C check */
+#endif
 	if (!interrupted)
 		return 0;
 	interrupted = 0;
 	return 1;
 }
+
+#ifdef __SASC
+/* Amiga SAS/C replacement ^C handler */
+void __regargs _CXBRK(void)
+{
+	interrupted=1;
+}
+#endif
 
 #endif /* !OK */
 

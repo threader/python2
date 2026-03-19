@@ -3,10 +3,15 @@
 
 #include "Python.h"
 #include "osdefs.h"
+#include "protos.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string.h>
+
+#ifdef _AMIGA
+#include <proto/dos.h>
+#endif
 
 #if HAVE_UNISTD_H
 #include <unistd.h>
@@ -15,6 +20,9 @@
 #ifdef WITH_NEXT_FRAMEWORK
 #include <mach-o/dyld.h>
 #endif
+
+static int isxfile ( char *filename );	// FWD
+
 
 /* Search in some common locations for the associated Python libraries.
  *
@@ -114,9 +122,13 @@
 #endif
 
 #ifndef PYTHONPATH
+#ifdef _AMIGA
+#define PYTHONPATH PREFIX "lib/python" VERSION ";" EXEC_PREFIX "lib/python" VERSION "/lib-dynload"
+#else /* !_AMIGA */
 /* I know this isn't K&R C, but the Makefile specifies it anyway */
 #define PYTHONPATH PREFIX "/lib/python" VERSION ":" \
 	      EXEC_PREFIX "/lib/python" VERSION "/lib-dynload"
+#endif
 #endif
 
 #ifndef LANDMARK
@@ -129,6 +141,82 @@ static char progpath[MAXPATHLEN+1];
 static char *module_search_path = NULL;
 static char lib_python[] = "lib/python" VERSION;
 
+
+#ifdef _AMIGA
+/* determine full program path */
+extern void Py_GetArgcArgv Py_PROTO((int *argc, char ***argv));	/* in main.c */
+
+static const char *fullprogpath(void)
+{
+	static char path[MAXPATHLEN*2];
+	static char prog[MAXPATHLEN];
+
+	BPTR dir;
+
+	extern BOOL from_WB;	/* in main.c */
+
+	// If the program name contains ':' or '/' it's not in the user's path
+	// and probably set by using Py_SetProgramName. In that case, just
+	// use this. If it exists!
+	strcpy(path,Py_GetProgramName());
+	if(strchr(path,':') || strchr(path,'/'))
+	{
+		if(!isxfile(path))
+		{
+			// Error; the specified file does not exist or is no exe
+			path[0]='\0';
+		}
+		return path;
+	}
+
+	// Construct the full path of our executable program.
+	if(from_WB)
+	{
+		/* We're launced from WB, GetProgramName() won't work */
+		/* Use WB's argv[0] as the executable path */
+		int argc;
+		char **argv;
+		Py_GetArgcArgv(&argc, &argv);
+		if(argc>0)
+			strcpy(path,argv[0]);
+		else
+			strcpy(path,"!error!");
+	}
+	else
+	{
+		/* Launced from CLI, use GetProgramName */
+
+		/* However, first check if the specified name exists */
+		if(!isxfile(path))
+		{
+			path[0]='\0';
+			return path;
+		}
+
+		path[0]=0;
+		if(dir=GetProgramDir())
+		{
+			(void)NameFromLock(dir,path,MAXPATHLEN);
+			if(!GetProgramName(prog,MAXPATHLEN))	// this is a dos.library function!
+				strcpy(prog,"!error!");
+			if(!AddPart(path,prog,MAXPATHLEN*2))
+				strcpy(path,"!error!");
+		}	
+	}
+	return path;
+}
+
+static void reduce( char *dir)
+{
+	int i = strlen(dir);
+	if(i>0 && dir[i-1]==':') dir[--i]=0;
+	while (i > 0 && dir[i] != SEP && dir[i] != ':') --i;
+	if(dir[i]!=':') dir[i] = '\0';
+	else dir[i+1]='\0';
+}
+
+#else /*! AMIGA */
+
 static void
 reduce(char *dir)
 {
@@ -138,6 +226,7 @@ reduce(char *dir)
     dir[i] = '\0';
 }
 
+#endif /* _AMIGA */
 
 #ifndef S_ISREG
 #define S_ISREG(x) (((x) & S_IFMT) == S_IFREG)
@@ -201,6 +290,9 @@ isdir(char *filename)			/* Is directory */
 }
 
 
+#ifdef _AMIGA
+#define joinpath(buffer,stuff) AddPart(buffer,stuff,MAXPATHLEN)
+#else
 /* joinpath requires that any buffer argument passed to it has at
    least MAXPATHLEN + 1 bytes allocated.  If this requirement is met,
    it guarantees that it will never overflow the buffer.  If stuff
@@ -223,6 +315,8 @@ joinpath(char *buffer, char *stuff)
     strncpy(buffer+n, stuff, k);
     buffer[n+k] = '\0';
 }
+#endif
+
 
 /* init_path_from_argv0 requirs that path be allocated at least
    MAXPATHLEN + 1 bytes and that argv0_path be no more than MAXPATHLEN
@@ -379,8 +473,10 @@ calculate_path(void)
     char *pythonpath = PYTHONPATH;
     char *rtpypath = getenv("PYTHONPATH");
     char *home = Py_GetPythonHome();
+#ifndef _AMIGA
     char *path = getenv("PATH");
     char *prog = Py_GetProgramName();
+#endif
     char argv0_path[MAXPATHLEN+1];
     int pfound, efound; /* 1 if found; -1 if found build directory */
     char *buf;
@@ -408,6 +504,9 @@ calculate_path(void)
            (even though NSNameOfModule() probably does the same thing.) */
 #endif
 	
+#ifdef _AMIGA
+	strcpy(progpath,fullprogpath());
+#else /* !_AMIGA */
 	/* If there is no slash in the argv0 path, then we have to
 	 * assume python is on the user's $PATH, since there's no
 	 * other way to find a directory to start the search from.  If
@@ -447,6 +546,7 @@ calculate_path(void)
 #ifdef WITH_NEXT_FRAMEWORK
     }
 #endif
+#endif /* !_AMIGA */
 
     strncpy(argv0_path, progpath, MAXPATHLEN);
 	
@@ -457,7 +557,11 @@ calculate_path(void)
         while (linklen != -1) {
             /* It's not null terminated! */
             tmpbuffer[linklen] = '\0';
+#ifdef _AMIGA
+			if (NULL==strchr(tmpbuffer,':'))
+#else
             if (tmpbuffer[0] == SEP)
+#endif
 		/* tmpbuffer should never be longer than MAXPATHLEN,
 		   but extra check does not hurt */
                 strncpy(argv0_path, tmpbuffer, MAXPATHLEN);
@@ -511,7 +615,11 @@ calculate_path(void)
     while (1) {
         char *delim = strchr(defpath, DELIM);
 
+#ifdef _AMIGA
+		if (NULL==strchr(defpath,':'))
+#else
         if (defpath[0] != SEP)
+#endif
             /* Paths are relative to prefix */
             bufsz += prefixsz;
 
@@ -551,7 +659,11 @@ calculate_path(void)
         while (1) {
             char *delim = strchr(defpath, DELIM);
 
+#ifdef _AMIGA
+			if (NULL==strchr(defpath,':')) {
+#else
             if (defpath[0] != SEP) {
+#endif
                 strcat(buf, prefix);
                 strcat(buf, separator);
             }

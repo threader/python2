@@ -557,7 +557,12 @@ PyRun_SimpleFileEx(FILE *fp, char *filename, int closeit)
 		return -1;
 	d = PyModule_GetDict(m);
 	ext = filename + strlen(filename) - 4;
+#ifdef _AMIGA
+	/* on Amiga, filenames are case insensitive */
+	if (stricmp(ext, ".pyc") == 0 || stricmp(ext, ".pyo") == 0
+#else
 	if (strcmp(ext, ".pyc") == 0 || strcmp(ext, ".pyo") == 0
+#endif /* _AMIGA */
 #ifdef macintosh
 	/* On a mac, we also assume a pyc file for types 'PYC ' and 'APPL' */
 	    || PyMac_getfiletype(filename) == 'PYC '

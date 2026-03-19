@@ -31,7 +31,7 @@
  *   PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* CVS: $Id$ */
+/* CVS: $Id: _cursesmodule.c,v 2.39 2000/09/01 03:46:16 jhylton Exp $ */
 
 /*
 

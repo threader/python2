@@ -62,6 +62,29 @@ is_error(double x)
 	return result;
 }
 
+#ifdef __SASC
+static PyObject *math_post_f(double x)
+{
+	CHECK(x);
+	if(errno && is_error(x)) return NULL;
+	else return PyFloat_FromDouble(x);
+}
+
+#define FUNC1(funcname, func, docstring) \
+	static PyObject * math_##funcname(PyObject *self, PyObject *args) { \
+	double x; if (!  PyArg_ParseTuple(args, "d:" #funcname, &x)) return NULL; \
+	errno = 0; PyFPE_START_PROTECT("in math_1", return 0) \
+	x = func(x); PyFPE_END_PROTECT(x)  return math_post_f(x); } \
+        static char math_##funcname##_doc [] = docstring;
+
+#define FUNC2(funcname, func, docstring) \
+	static PyObject * math_##funcname(PyObject *self, PyObject *args) { \
+	double x, y; if (! PyArg_ParseTuple(args, "dd:" #funcname, &x, &y))	return NULL; \
+	errno = 0; PyFPE_START_PROTECT("in math_2", return 0) \
+	x = func(x, y);	PyFPE_END_PROTECT(x)  return math_post_f(x); } \
+        static char math_##funcname##_doc [] = docstring;
+
+#else /* !__SASC */
 static PyObject *
 math_1(PyObject *args, double (*func) (double), char *argsfmt)
 {
@@ -107,6 +130,8 @@ math_2(PyObject *args, double (*func) (double, double), char *argsfmt)
 		return math_2(args, func, "dd:" #funcname); \
 	}\
         static char math_##funcname##_doc [] = docstring;
+
+#endif /* !__SASC */
 
 FUNC1(acos, acos,
       "acos(x)\n\nReturn the arc cosine of x.")

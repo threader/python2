@@ -893,7 +893,7 @@ DL_EXPORT(void)
 initpyexpat(void)
 {
     PyObject *m, *d;
-    char *rev = "$Revision$";
+    char *rev = "$Revision: 2.27 $";
     PyObject *errmod_name = PyString_FromString("pyexpat.errors");
     PyObject *errors_module, *errors_dict;
     PyObject *sys_modules;

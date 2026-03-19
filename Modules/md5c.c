@@ -51,6 +51,12 @@ static void Decode(UINT4 *, unsigned char *, unsigned int);
 static void MD5_memcpy(POINTER, POINTER, unsigned int);
 static void MD5_memset(POINTER, int, unsigned int);
 
+#ifdef _AMIGA
+#include <string.h>
+#define MD5_memcpy memcpy
+#define MD5_memset memset
+#endif
+
 static unsigned char PADDING[64] = {
     0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -293,6 +299,7 @@ Decode(UINT4 *output, unsigned char *input, unsigned int len)
 
 
 /* Note: Replace "for loop" with standard memcpy if possible. */
+#ifndef _AMIGA
 static void
 MD5_memcpy(POINTER output, POINTER input, unsigned int len)
 {
@@ -312,3 +319,4 @@ MD5_memset(POINTER output, int value, unsigned int len)
     for (i = 0; i < len; i++)
         ((char *)output)[i] = (char)value;
 }
+#endif /* _AMIGA */

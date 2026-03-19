@@ -14,6 +14,12 @@ extern "C" {
 #define DELIM '\n'
 #endif
 
+#ifdef _AMIGA
+#define SEP '/'
+#define MAXPATHLEN 256
+#define DELIM ';'
+#endif
+
 /* Mod by chrish: QNX has WATCOM, but isn't DOS */
 #if !defined(__QNX__)
 #if defined(MS_WINDOWS) || defined(__BORLANDC__) || defined(__WATCOMC__) || defined(__DJGPP__) || defined(PYOS_OS2)

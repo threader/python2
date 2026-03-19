@@ -2,6 +2,7 @@
 /* Time module */
 
 #include "Python.h"
+#include "protos.h"
 
 #include <ctype.h>
 
@@ -17,6 +18,10 @@
 #endif /* USE_GUSI2 */
 #else
 #include <sys/types.h>
+#endif
+
+#ifdef _AMIGA
+#include <proto/dos.h>
 #endif
 
 #ifdef QUICKWIN
@@ -692,6 +697,16 @@ floatsleep(double secs)
 #if defined(HAVE_SELECT) && !defined(__BEOS__)
 	struct timeval t;
 	double frac;
+#if defined (AMITCP) || defined(INET225)
+	/* check for availability of an Amiga TCP stack for select() */
+	if(!checksocketlib())
+	{
+		/* no bsdsocket.library-- use dos/Delay() */
+		PyErr_Clear();
+		Delay((long)(secs*50));		/* XXX Can't interrupt this sleep */
+		return 0;
+	}
+#endif
 	frac = fmod(secs, 1.0);
 	secs = floor(secs);
 	t.tv_sec = (long)secs;
@@ -796,10 +811,17 @@ floatsleep(double secs)
 		Py_END_ALLOW_THREADS
 	}
 #else /* !__BEOS__ */
+#ifdef _AMIGA
+	/* XXX Can't interrupt this sleep */
+	Py_BEGIN_ALLOW_THREADS
+	Delay((long)(secs*50));
+	Py_END_ALLOW_THREADS
+#else /* !_AMIGA */
 	/* XXX Can't interrupt this sleep */
 	Py_BEGIN_ALLOW_THREADS
 	sleep((int)secs);
 	Py_END_ALLOW_THREADS
+#endif /* !_AMIGA */
 #endif /* !__BEOS__ */
 #endif /* !PYOS_OS2 */
 #endif /* !MS_WIN32 */

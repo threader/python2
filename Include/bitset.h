@@ -7,7 +7,11 @@ extern "C" {
 
 /* Bitset interface */
 
+#ifdef _AMIGA
+#include <exec/types.h>
+#else /* !_AMIGA */
 #define BYTE		char
+#endif
 
 typedef BYTE *bitset;
 
