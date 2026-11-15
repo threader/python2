@@ -13,10 +13,10 @@ def read_default(name=None):
     global _defaults
     from ConfigParser import SafeConfigParser, NoOptionError
     if not _defaults:
-        if os.path.exists('/usr/share/python/debian_defaults'):
+        if os.path.exists('/usr/share/python2/debian_defaults'):
             config = SafeConfigParser()
             try:
-                config.readfp(file('/usr/share/python/debian_defaults'))
+                config.readfp(file('/usr/share/python2/debian_defaults'))
             except IOError, msg:
                 print msg
                 sys.exit(1)

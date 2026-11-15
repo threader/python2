@@ -1,6 +1,6 @@
 #! /bin/sh
 set -e
 
-find /usr/share/python/ -name '*.py[oc]' -delete
+find /usr/share/python2/ -name '*.py[oc]' -delete
 
 #DEBHELPER#

@@ -1,6 +1,6 @@
 #! /usr/bin/python2
 
 import sys
-sys.path[0:0] = ['/usr/share/python']
+sys.path[0:0] = ['/usr/share/python2']
 import pyversions
 pyversions.main()
